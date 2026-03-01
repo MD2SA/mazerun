@@ -14,24 +14,27 @@ docker compose up -d
 2. Start our own python "bridge":
 
 - From inside the dir `bridge/`
+  - Create python virtual environment (First time only)
+    ```bash
+    python -m venv venv
+    ```
+  - Activate virtual environment   
     - Linux/Mac
-    ```bash
-    source venv/bin/activate
-    ```
+      ```bash
+      source venv/bin/activate
+      ```
     - Windows
+      ```bash
+      ./venv/bin/Activate.ps1
+      ```
+  - Install python packages
     ```bash
-    ./venv/bin/Activate.ps1
+    pip install -r requirements.txt
     ```
-
-- Install python packages
-```bash
-pip install -r requirements.txt
-```
-
-- Start python program
-```bash
-python main.py
-```
+  - Start python program
+    ```bash
+    python main.py
+    ```
 
 3. Start mazerun program:
 
@@ -42,9 +45,9 @@ python main.py
         ```
     - Mac
         - Once inside the dir where the program is:
-        ```bash
-        ??? something similar to windows ???
-        ```
+          ```bash
+          ??? something similar to windows ???
+          ```
 > In the future you may want to change up the flags read more [here](#FLAGS).
 
 ---
@@ -117,6 +120,6 @@ mazerun/
     - portbroker -> broker port used
 
 Example:
-```bash
-25 --flagMessage 1 --delay 2 --broker broker.hivemq.com --portbroker 1883
-```
+  ```bash
+  25 --flagMessage 1 --delay 2 --broker broker.hivemq.com --portbroker 1883
+  ```
