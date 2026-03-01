@@ -16,7 +16,7 @@ docker compose up -d
 - From inside the dir `bridge/`
   - Create python virtual environment (First time only)
     ```bash
-    python -m venv venv
+    python3 -m venv venv
     ```
   - Activate virtual environment   
     - Linux/Mac
@@ -33,7 +33,7 @@ docker compose up -d
     ```
   - Start python program
     ```bash
-    python main.py
+    python3 main.py
     ```
 
 3. Start mazerun program:
