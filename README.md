@@ -50,6 +50,10 @@ docker compose up -d
           ```
 > In the future you may want to change up the flags read more [here](#FLAGS).
 
+4. Extra: visualize databases:
+- If you want to check the mongo DB try installing [MongoDB Compass](https://www.mongodb.com/products/tools/compass)
+  > Mysql is not ready yet, but when time comes there will be a docker container for it, so no need to install phpMyAdmin or others 
+
 ---
 
 ## Project structure
