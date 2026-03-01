@@ -1,0 +1,8 @@
+mqtt:
+  broker: "broker.hivemq.com"
+  port: 1883
+  topic: "pisid_mazemov_25" # 25 is the number of our group
+
+mongo:
+  uri: "mongodb://localhost:27017"
+  db: "game"
