@@ -1,6 +1,7 @@
-# PISID - Projetos Marsamis
-
-![Project flow](assets/flow.png)
+# PISID - Projeto Marsamis
+<p align="center">
+  <img src="assets/flow.png" width="600" />
+</p>
 
 ## How to run:
 
