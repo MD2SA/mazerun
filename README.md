@@ -105,6 +105,8 @@ mazerun/
     - Internet must work
     - Try switching the broker (check online for other brokers)
 
+---
+
 #### FLAGS
 
 - Explaining Flags for mazerun.exe:
