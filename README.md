@@ -18,14 +18,14 @@ docker compose up -d
     ```bash
     python3 -m venv venv
     ```
-  - Activate virtual environment   
+  - Activate virtual environment
     - Linux/Mac
       ```bash
       source venv/bin/activate
       ```
     - Windows
       ```bash
-      ./venv/bin/Activate.ps1
+      ./venv/Scripts/Activate.ps1
       ```
   - Install python packages
     ```bash
@@ -52,7 +52,7 @@ docker compose up -d
 
 4. Extra: visualize databases:
 - If you want to check the mongo DB try installing [MongoDB Compass](https://www.mongodb.com/products/tools/compass)
-  > Mysql is not ready yet, but when time comes there will be a docker container for it, so no need to install phpMyAdmin or others 
+  > Mysql is not ready yet, but when time comes there will be a docker container for it, so no need to install phpMyAdmin or others
 
 ---
 
