@@ -1,5 +1,5 @@
 services:
-  # for PC's1
+
   mongo:
     image: mongo:latest
     container_name: mongo
@@ -7,20 +7,29 @@ services:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
-  # TODO: implement replicas
+  # TODO: IMPLEMENT REPLICAS
 
-  # for PC2 (not needed for now)
-  # mysql:
-  #   image: mysql:latest
-  #   container_name: mysql
-  #   ports:
-  #     - "3306:3306"
-  #   environment:
-  #     MYSQL_ROOT_PASSWORD: root
-  #   volumes:
-  #     - mysql_data:/var/lib/mysql
+  mysql:
+    image: mysql:latest
+    container_name: mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./dbs/mysql:/backup
 
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: mysql
+    depends_on:
+      - mysql
 
 volumes:
   mongo_data:
-  # mysql_data:
+  mysql_data:
