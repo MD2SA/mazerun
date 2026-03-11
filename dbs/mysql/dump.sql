@@ -26,6 +26,112 @@ CREATE DATABASE /*!32312 IF NOT EXISTS*/ `mazerun` /*!40100 DEFAULT CHARACTER SE
 USE `mazerun`;
 
 --
+-- Table structure for table `measures`
+--
+
+DROP TABLE IF EXISTS `measures`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `measures` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `time` timestamp NOT NULL,
+  `originRoom` int NOT NULL,
+  `destinyRoom` int NOT NULL,
+  `Marsami` int NOT NULL,
+  `Status` int NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `measures`
+--
+
+LOCK TABLES `measures` WRITE;
+/*!40000 ALTER TABLE `measures` DISABLE KEYS */;
+/*!40000 ALTER TABLE `measures` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `message`
+--
+
+DROP TABLE IF EXISTS `message`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `message` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `time` timestamp NOT NULL,
+  `room` int NOT NULL,
+  `sensor` varchar(10) NOT NULL,
+  `reading` decimal(10,2) NOT NULL,
+  `alertType` varchar(50) NOT NULL,
+  `msg` varchar(100) NOT NULL,
+  `insertTime` timestamp NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `message`
+--
+
+LOCK TABLES `message` WRITE;
+/*!40000 ALTER TABLE `message` DISABLE KEYS */;
+/*!40000 ALTER TABLE `message` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `ocupation`
+--
+
+DROP TABLE IF EXISTS `ocupation`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `ocupation` (
+  `id` int NOT NULL,
+  `oddMarsamis` int NOT NULL,
+  `evenMarsamis` int NOT NULL,
+  `Room` int NOT NULL,
+  PRIMARY KEY (`id`,`Room`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `ocupation`
+--
+
+LOCK TABLES `ocupation` WRITE;
+/*!40000 ALTER TABLE `ocupation` DISABLE KEYS */;
+/*!40000 ALTER TABLE `ocupation` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `simulation`
+--
+
+DROP TABLE IF EXISTS `simulation`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `simulation` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `description` text NOT NULL,
+  `team` int NOT NULL,
+  `startDate` timestamp NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `simulation`
+--
+
+LOCK TABLES `simulation` WRITE;
+/*!40000 ALTER TABLE `simulation` DISABLE KEYS */;
+/*!40000 ALTER TABLE `simulation` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `sound`
 --
 
@@ -34,7 +140,7 @@ DROP TABLE IF EXISTS `sound`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `sound` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `hour` timestamp NOT NULL,
+  `time` timestamp NOT NULL,
   `sound` varchar(12) NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -47,6 +153,57 @@ CREATE TABLE `sound` (
 LOCK TABLES `sound` WRITE;
 /*!40000 ALTER TABLE `sound` DISABLE KEYS */;
 /*!40000 ALTER TABLE `sound` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `temperature`
+--
+
+DROP TABLE IF EXISTS `temperature`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `temperature` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `time` timestamp NOT NULL,
+  `temperature` varchar(12) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `temperature`
+--
+
+LOCK TABLES `temperature` WRITE;
+/*!40000 ALTER TABLE `temperature` DISABLE KEYS */;
+/*!40000 ALTER TABLE `temperature` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `user`
+--
+
+DROP TABLE IF EXISTS `user`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user` (
+  `name` varchar(100) NOT NULL,
+  `phone` varchar(12) NOT NULL,
+  `type` varchar(3) NOT NULL,
+  `email` varchar(50) NOT NULL,
+  `birth` date NOT NULL,
+  `team` int NOT NULL,
+  PRIMARY KEY (`email`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `user`
+--
+
+LOCK TABLES `user` WRITE;
+/*!40000 ALTER TABLE `user` DISABLE KEYS */;
+/*!40000 ALTER TABLE `user` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -66,4 +223,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-03-11 19:58:14
+-- Dump completed on 2026-03-11 21:09:33
