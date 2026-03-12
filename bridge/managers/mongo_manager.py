@@ -1,7 +1,6 @@
 from pymongo import MongoClient, UpdateOne
 from datetime import datetime, timezone
 
-
 class MongoManager:
 
     def __init__(self, uri: str, db: str):
@@ -16,42 +15,48 @@ class MongoManager:
     # Public API
     # -------------------------
 
-    def process_and_save(self, raw: dict) -> None:
-        """
-        Main entry point: process raw data and persist it.
-        """
-        data = self._parse_raw(raw)
-        timestamp = self._now()
+    def process_message(self, topic, payload):
+        if "mazemov" in topic:
+            self._handle_movement(payload)
 
-        self._save_move(data, timestamp)
-        self._update_rooms(data, timestamp)
+        elif "mazetemp" in topic:
+            self._handle_temperature(payload)
 
-    # -------------------------
-    # Parsing / Utils
-    # -------------------------
-
-    def _parse_raw(self, raw: dict) -> dict:
-        """
-        Extract and normalize raw payload.
-        """
-        return {
-            "player": raw["Player"],
-            "marsami": raw["Marsami"],
-            "origin": raw["RoomOrigin"],     # corrigido
-            "destiny": raw["RoomDestiny"],   # corrigido
-            "status": raw["Status"],
-        }
-
-    def _now(self):
-        return datetime.now(timezone.utc)
+        elif "mazesound" in topic:
+            self._handle_sound(payload)
 
     # -------------------------
-    # Operations on collections
+    # Utils
     # -------------------------
-    def _save_move(self, data: dict, timestamp) -> None:
-        """
-        Insert move document.
-        """
+
+    def _update_rooms(self, data: dict, timestamp):
+        # Decreases destiny room (if exists)
+        self.db["rooms"].update_one(
+            {"_id": data["destiny"]},
+            {
+                "$inc": {"marsami_count": -1},
+                "$set": {"last_move": timestamp}
+            },
+            upsert=True
+        )
+
+        # Fix invalid values
+        self.db["rooms"].update_one(
+            {"_id": data["destiny"], "marsami_count": {"$lt": 0}},
+            {"$set": {"marsami_count": 0}}
+        )
+
+        # Increases origin room
+        self.db["rooms"].update_one(
+            {"_id": data["origin"]},
+            {
+                "$inc": {"marsami_count": 1},
+                "$set": {"last_move": timestamp}
+            },
+            upsert=True
+        )
+
+    def _save_move(self, data: dict, timestamp):
         result = self.db["moves"].insert_one({
             "player": data["player"],
             "marsami": data["marsami"],
@@ -60,40 +65,56 @@ class MongoManager:
             "status": data["status"],
             "timestamp": timestamp
         })
-
         print("Move saved:", result.inserted_id)
 
-    def _update_rooms(self, data: dict, timestamp) -> None:
-        """
-        Update origin and destiny rooms.
-        """
-        operations = [
-            UpdateOne(
-                {"_id": data["destiny"]},
-                {
-                    "$set": {
-                        "marsami_count": {
-                            "$cond": [
-                                {"$gt": ["$marsami_count", 0]},
-                                {"$subtract": ["$marsami_count", 1]},
-                                0
-                            ]
-                        },
-                        "last_move": timestamp
-                    }
-                },
-                upsert=True
-            ),
-            UpdateOne(
-                {"_id": data["origin"]},
-                {
-                    "$inc": {"marsami_count": 1},
-                    "$set": {"last_move": timestamp}
-                },
-                upsert=True
-            )
-        ]
+    def _now(self):
+        return datetime.now(timezone.utc)
 
-        result = self.db["rooms"].bulk_write(operations)
+    # -------------------------
+    # Movement Handler
+    # -------------------------
 
-        print("Rooms updated:", result.modified_count)
+    def _handle_movement(self, raw):
+        data = {
+                "player": raw["Player"],
+                "marsami": raw["Marsami"],
+                "origin": raw["RoomOrigin"],
+                "destiny": raw["RoomDestiny"],
+                "status": raw["Status"]
+        }
+
+        timestamp = self._now()
+
+        self._save_move(data, timestamp)
+        self._update_rooms(data, timestamp)
+
+    # -------------------------
+    # Temperature Handler
+    # -------------------------
+
+    def _handle_temperature(self, raw):
+        data = {
+            "player": raw["Player"],
+            "temperature": raw["Temperature"],
+            "timestamp": datetime.fromisoformat(raw["Hour"])
+        }
+
+        self.db["temperature"].insert_one(data)
+
+        print("Temperature saved")
+
+    # -------------------------
+    # Sound Handler
+    # -------------------------
+
+    def _handle_sound(self, raw):
+        data = {
+                "player": raw["Player"],
+                "sound": raw["Sound"],
+                "timestamp": datetime.fromisoformat(raw["Hour"])
+        }
+
+        self.db["sound"].insert_one(data)
+
+        print("Sound saved")
+
