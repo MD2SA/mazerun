@@ -1,7 +1,11 @@
 mqtt:
   broker: "broker.hivemq.com"
   port: 1883
-  topic: "pisid_mazemov_25" # 25 is the number of our group
+  # 25 is the number of our group
+  topics:
+    - pisid_mazemov_25
+    - pisid_mazetemp_25
+    - pisid_mazesound_25
 
 mongo:
   uri: "mongodb://localhost:27017"

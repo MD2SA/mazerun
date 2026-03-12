@@ -16,9 +16,9 @@ manager = MongoManager(
 
 # Start MQTT client
 mqtt = MQTTClient(
-    broker=mqtt_config.get("broker", "broker.hivemq.com"),
-    port=mqtt_config.get("port", 1883),
-    topic=mqtt_config.get("topic", "pisid_mazemov_25"),
+    broker=mqtt_config.get("broker"),
+    port=mqtt_config.get("port"),
+    topics=mqtt_config.get("topics"),
     manager=manager,
 )
 
