@@ -41,7 +41,7 @@ docker compose up -d
 - On a separate window start the mazerun executable with **this flags**. Once inside the dir where the program is, do:
     - Windows
         ```bash
-        mazerun.exe 25 --flagMessage 1 --delay 2 --broker broker.hivemq.com --portbroker 1883
+        .\mazerun.exe 25 --flagMessage 1 --delay 2 --broker broker.hivemq.com --portbroker 1883
         ```
     - Mac
         - Once inside the dir where the program is:
