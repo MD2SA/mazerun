@@ -207,6 +207,184 @@ LOCK TABLES `user` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `invalid_moves`
+--
+
+DROP TABLE IF EXISTS `invalid_moves`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `invalid_moves` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `time` timestamp NOT NULL,
+  `originRoom` int NOT NULL,
+  `destinyRoom` int NOT NULL,
+  `marsami` int NOT NULL,
+  `status` int NOT NULL,
+  `reason` varchar(100) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `invalid_moves`
+--
+
+LOCK TABLES `invalid_moves` WRITE;
+/*!40000 ALTER TABLE `invalid_moves` DISABLE KEYS */;
+/*!40000 ALTER TABLE `invalid_moves` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `outliers`
+--
+
+DROP TABLE IF EXISTS `outliers`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `outliers` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `time` timestamp NOT NULL,
+  `sensor` varchar(10) NOT NULL,
+  `value` decimal(10,2) NOT NULL,
+  `reason` varchar(100) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `outliers`
+--
+
+LOCK TABLES `outliers` WRITE;
+/*!40000 ALTER TABLE `outliers` DISABLE KEYS */;
+/*!40000 ALTER TABLE `outliers` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `alerts`
+--
+
+DROP TABLE IF EXISTS `alerts`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `alerts` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `time` timestamp NOT NULL,
+  `sensor` varchar(10) NOT NULL,
+  `value` decimal(10,2) NOT NULL,
+  `alertType` varchar(50) NOT NULL,
+  `description` varchar(100) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `alerts`
+--
+
+LOCK TABLES `alerts` WRITE;
+/*!40000 ALTER TABLE `alerts` DISABLE KEYS */;
+/*!40000 ALTER TABLE `alerts` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `actions`
+--
+
+DROP TABLE IF EXISTS `actions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `actions` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `time` timestamp NOT NULL,
+  `action_type` varchar(50) NOT NULL,
+  `target` varchar(50) NOT NULL,
+  `value` int DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `actions`
+--
+
+LOCK TABLES `actions` WRITE;
+/*!40000 ALTER TABLE `actions` DISABLE KEYS */;
+/*!40000 ALTER TABLE `actions` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `room_connections`
+--
+
+DROP TABLE IF EXISTS `room_connections`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `room_connections` (
+  `origin` int NOT NULL,
+  `destiny` int NOT NULL,
+  PRIMARY KEY (`origin`,`destiny`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `room_connections`
+--
+
+LOCK TABLES `room_connections` WRITE;
+/*!40000 ALTER TABLE `room_connections` DISABLE KEYS */;
+/*!40000 ALTER TABLE `room_connections` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `corridor_state`
+--
+
+DROP TABLE IF EXISTS `corridor_state`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `corridor_state` (
+  `origin` int NOT NULL,
+  `destiny` int NOT NULL,
+  `is_open` boolean NOT NULL,
+  PRIMARY KEY (`origin`,`destiny`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `corridor_state`
+--
+
+LOCK TABLES `corridor_state` WRITE;
+/*!40000 ALTER TABLE `corridor_state` DISABLE KEYS */;
+/*!40000 ALTER TABLE `corridor_state` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `processed_events`
+--
+
+DROP TABLE IF EXISTS `processed_events`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `processed_events` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `mongo_id` varchar(50) NOT NULL,
+  `processed_at` timestamp NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `processed_events`
+--
+
+LOCK TABLES `processed_events` WRITE;
+/*!40000 ALTER TABLE `processed_events` DISABLE KEYS */;
+/*!40000 ALTER TABLE `processed_events` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Dumping events for database 'mazerun'
 --
 
@@ -224,3 +402,4 @@ UNLOCK TABLES;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
 -- Dump completed on 2026-03-11 21:09:33
+
