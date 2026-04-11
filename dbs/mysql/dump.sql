@@ -285,37 +285,6 @@ LOCK TABLES `outliers` WRITE;
 UNLOCK TABLES;
 
 --
--- Table structure for table `alerts`
---
-
-DROP TABLE IF EXISTS `alerts`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `alerts` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `sensor` varchar(10) NOT NULL,
-  `value` decimal(10,2) NOT NULL,
-  `alertType` varchar(50) NOT NULL,
-  `description` varchar(100) NOT NULL,
-  `simulation_id` int NOT NULL,
-  PRIMARY KEY (`id`),
-  KEY `fk_alerts_simulation` (`simulation_id`),
-  CONSTRAINT `fk_alerts_simulation`
-    FOREIGN KEY (`simulation_id`) REFERENCES `simulation`(`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `alerts`
---
-
-LOCK TABLES `alerts` WRITE;
-/*!40000 ALTER TABLE `alerts` DISABLE KEYS */;
-/*!40000 ALTER TABLE `alerts` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
 -- Table structure for table `actions`
 --
 
@@ -343,53 +312,6 @@ CREATE TABLE `actions` (
 LOCK TABLES `actions` WRITE;
 /*!40000 ALTER TABLE `actions` DISABLE KEYS */;
 /*!40000 ALTER TABLE `actions` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `room_connections`
---
-
-DROP TABLE IF EXISTS `room_connections`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `room_connections` (
-  `origin` int NOT NULL,
-  `destiny` int NOT NULL,
-  PRIMARY KEY (`origin`,`destiny`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `room_connections`
---
-
-LOCK TABLES `room_connections` WRITE;
-/*!40000 ALTER TABLE `room_connections` DISABLE KEYS */;
-/*!40000 ALTER TABLE `room_connections` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `corridor_state`
---
-
-DROP TABLE IF EXISTS `corridor_state`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `corridor_state` (
-  `origin` int NOT NULL,
-  `destiny` int NOT NULL,
-  `is_open` tinyint(1) NOT NULL DEFAULT '1',
-  PRIMARY KEY (`origin`,`destiny`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `corridor_state`
---
-
-LOCK TABLES `corridor_state` WRITE;
-/*!40000 ALTER TABLE `corridor_state` DISABLE KEYS */;
-/*!40000 ALTER TABLE `corridor_state` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
