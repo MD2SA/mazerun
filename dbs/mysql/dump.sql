@@ -26,160 +26,6 @@ CREATE DATABASE /*!32312 IF NOT EXISTS*/ `mazerun` /*!40100 DEFAULT CHARACTER SE
 USE `mazerun`;
 
 --
--- Table structure for table `measures`
---
-
-DROP TABLE IF EXISTS `measures`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `measures` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `time` timestamp NOT NULL,
-  `originRoom` int NOT NULL,
-  `destinyRoom` int NOT NULL,
-  `Marsami` int NOT NULL,
-  `Status` int NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `measures`
---
-
-LOCK TABLES `measures` WRITE;
-/*!40000 ALTER TABLE `measures` DISABLE KEYS */;
-/*!40000 ALTER TABLE `measures` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `message`
---
-
-DROP TABLE IF EXISTS `message`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `message` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `time` timestamp NOT NULL,
-  `room` int NOT NULL,
-  `sensor` varchar(10) NOT NULL,
-  `reading` decimal(10,2) NOT NULL,
-  `alertType` varchar(50) NOT NULL,
-  `msg` varchar(100) NOT NULL,
-  `insertTime` timestamp NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `message`
---
-
-LOCK TABLES `message` WRITE;
-/*!40000 ALTER TABLE `message` DISABLE KEYS */;
-/*!40000 ALTER TABLE `message` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `ocupation`
---
-
-DROP TABLE IF EXISTS `ocupation`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `ocupation` (
-  `id` int NOT NULL,
-  `oddMarsamis` int NOT NULL,
-  `evenMarsamis` int NOT NULL,
-  `Room` int NOT NULL,
-  PRIMARY KEY (`id`,`Room`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `ocupation`
---
-
-LOCK TABLES `ocupation` WRITE;
-/*!40000 ALTER TABLE `ocupation` DISABLE KEYS */;
-/*!40000 ALTER TABLE `ocupation` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `simulation`
---
-
-DROP TABLE IF EXISTS `simulation`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `simulation` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `description` text NOT NULL,
-  `team` int NOT NULL,
-  `startDate` timestamp NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `simulation`
---
-
-LOCK TABLES `simulation` WRITE;
-/*!40000 ALTER TABLE `simulation` DISABLE KEYS */;
-/*!40000 ALTER TABLE `simulation` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `sound`
---
-
-DROP TABLE IF EXISTS `sound`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `sound` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `time` timestamp NOT NULL,
-  `sound` varchar(12) NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `sound`
---
-
-LOCK TABLES `sound` WRITE;
-/*!40000 ALTER TABLE `sound` DISABLE KEYS */;
-/*!40000 ALTER TABLE `sound` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `temperature`
---
-
-DROP TABLE IF EXISTS `temperature`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `temperature` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `time` timestamp NOT NULL,
-  `temperature` varchar(12) NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `temperature`
---
-
-LOCK TABLES `temperature` WRITE;
-/*!40000 ALTER TABLE `temperature` DISABLE KEYS */;
-/*!40000 ALTER TABLE `temperature` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
 -- Table structure for table `user`
 --
 
@@ -207,6 +53,180 @@ LOCK TABLES `user` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `simulation`
+--
+
+DROP TABLE IF EXISTS `simulation`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `simulation` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `description` text NOT NULL,
+  `team` int NOT NULL,
+  `startDate` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `user_email` varchar(50) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `fk_simulation_user` (`user_email`),
+  CONSTRAINT `fk_simulation_user` FOREIGN KEY (`user_email`) REFERENCES `user` (`email`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `simulation`
+--
+
+LOCK TABLES `simulation` WRITE;
+/*!40000 ALTER TABLE `simulation` DISABLE KEYS */;
+/*!40000 ALTER TABLE `simulation` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `measures`
+--
+
+DROP TABLE IF EXISTS `measures`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `measures` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `originRoom` int NOT NULL,
+  `destinyRoom` int NOT NULL,
+  `Marsami` int NOT NULL,
+  `Status` int NOT NULL,
+  `simulation_id` int NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `fk_measures_simulation` (`simulation_id`),
+  CONSTRAINT `fk_measures_simulation`
+    FOREIGN KEY (`simulation_id`) REFERENCES `simulation`(`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `measures`
+--
+
+LOCK TABLES `measures` WRITE;
+/*!40000 ALTER TABLE `measures` DISABLE KEYS */;
+/*!40000 ALTER TABLE `measures` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `message`
+--
+
+DROP TABLE IF EXISTS `message`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `message` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `room` int NOT NULL,
+  `sensor` varchar(10) NOT NULL,
+  `reading` decimal(10,2) NOT NULL,
+  `alertType` varchar(50) NOT NULL,
+  `msg` varchar(100) NOT NULL,
+  `insertTime` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `simulation_id` int NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `fk_message_simulation` (`simulation_id`),
+  CONSTRAINT `fk_message_simulation` FOREIGN KEY (`simulation_id`) REFERENCES `simulation` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `message`
+--
+
+LOCK TABLES `message` WRITE;
+/*!40000 ALTER TABLE `message` DISABLE KEYS */;
+/*!40000 ALTER TABLE `message` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `ocupation`
+--
+
+DROP TABLE IF EXISTS `ocupation`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `ocupation` (
+  `id` int NOT NULL,
+  `oddMarsamis` int NOT NULL,
+  `evenMarsamis` int NOT NULL,
+  `Room` int NOT NULL,
+  PRIMARY KEY (`id`,`Room`),
+  CONSTRAINT `fk_ocupation_simulation`
+    FOREIGN KEY (`id`) REFERENCES `simulation`(`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `ocupation`
+--
+
+LOCK TABLES `ocupation` WRITE;
+/*!40000 ALTER TABLE `ocupation` DISABLE KEYS */;
+/*!40000 ALTER TABLE `ocupation` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `sound`
+--
+
+DROP TABLE IF EXISTS `sound`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sound` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `sound` decimal(5,2) NOT NULL,
+  `room` int NOT NULL,
+  `simulation_id` int NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `fk_sound_simulation` (`simulation_id`),
+  CONSTRAINT `fk_sound_simulation` FOREIGN KEY (`simulation_id`) REFERENCES `simulation` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `sound`
+--
+
+LOCK TABLES `sound` WRITE;
+/*!40000 ALTER TABLE `sound` DISABLE KEYS */;
+/*!40000 ALTER TABLE `sound` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `temperature`
+--
+
+DROP TABLE IF EXISTS `temperature`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `temperature` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `temperature` decimal(5,2) NOT NULL,
+  `room` int NOT NULL,
+  `simulation_id` int NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `fk_temperature_simulation` (`simulation_id`),
+  CONSTRAINT `fk_temperature_simulation` FOREIGN KEY (`simulation_id`) REFERENCES `simulation` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `temperature`
+--
+
+LOCK TABLES `temperature` WRITE;
+/*!40000 ALTER TABLE `temperature` DISABLE KEYS */;
+/*!40000 ALTER TABLE `temperature` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `invalid_moves`
 --
 
@@ -215,13 +235,16 @@ DROP TABLE IF EXISTS `invalid_moves`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `invalid_moves` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `time` timestamp NOT NULL,
+  `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `originRoom` int NOT NULL,
   `destinyRoom` int NOT NULL,
   `marsami` int NOT NULL,
   `status` int NOT NULL,
   `reason` varchar(100) NOT NULL,
-  PRIMARY KEY (`id`)
+  `simulation_id` int NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `fk_invalid_moves_simulation` (`simulation_id`),
+  CONSTRAINT `fk_invalid_moves_simulation` FOREIGN KEY (`simulation_id`) REFERENCES `simulation` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -243,10 +266,11 @@ DROP TABLE IF EXISTS `outliers`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `outliers` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `time` timestamp NOT NULL,
+  `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `sensor` varchar(10) NOT NULL,
   `value` decimal(10,2) NOT NULL,
   `reason` varchar(100) NOT NULL,
+  `simulation_id` int DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -269,12 +293,16 @@ DROP TABLE IF EXISTS `alerts`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `alerts` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `time` timestamp NOT NULL,
+  `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `sensor` varchar(10) NOT NULL,
   `value` decimal(10,2) NOT NULL,
   `alertType` varchar(50) NOT NULL,
   `description` varchar(100) NOT NULL,
-  PRIMARY KEY (`id`)
+  `simulation_id` int NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `fk_alerts_simulation` (`simulation_id`),
+  CONSTRAINT `fk_alerts_simulation`
+    FOREIGN KEY (`simulation_id`) REFERENCES `simulation`(`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -296,11 +324,15 @@ DROP TABLE IF EXISTS `actions`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `actions` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `time` timestamp NOT NULL,
+  `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `action_type` varchar(50) NOT NULL,
   `target` varchar(50) NOT NULL,
   `value` int DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  `simulation_id` int NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `fk_actions_simulation` (`simulation_id`),
+  CONSTRAINT `fk_actions_simulation`
+    FOREIGN KEY (`simulation_id`) REFERENCES `simulation`(`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -346,7 +378,7 @@ DROP TABLE IF EXISTS `corridor_state`;
 CREATE TABLE `corridor_state` (
   `origin` int NOT NULL,
   `destiny` int NOT NULL,
-  `is_open` boolean NOT NULL,
+  `is_open` tinyint(1) NOT NULL DEFAULT '1',
   PRIMARY KEY (`origin`,`destiny`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -370,8 +402,9 @@ DROP TABLE IF EXISTS `processed_events`;
 CREATE TABLE `processed_events` (
   `id` int NOT NULL AUTO_INCREMENT,
   `mongo_id` varchar(50) NOT NULL,
-  `processed_at` timestamp NOT NULL,
-  PRIMARY KEY (`id`)
+  `processed_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_mongo_id` (`mongo_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
