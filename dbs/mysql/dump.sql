@@ -81,10 +81,10 @@ LOCK TABLES `simulation` WRITE;
 UNLOCK TABLES;
 
 --
--- Table structure for table `measures`
+-- Table structure for table `measure`
 --
 
-DROP TABLE IF EXISTS `measures`;
+DROP TABLE IF EXISTS `measure`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `measures` (
@@ -103,7 +103,7 @@ CREATE TABLE `measures` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `measures`
+-- Dumping data for table `measure`
 --
 
 LOCK TABLES `measures` WRITE;
@@ -230,10 +230,10 @@ UNLOCK TABLES;
 -- Table structure for table `invalid_moves`
 --
 
-DROP TABLE IF EXISTS `invalid_moves`;
+DROP TABLE IF EXISTS `invalid_move`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `invalid_moves` (
+CREATE TABLE `invalid_move` (
   `id` int NOT NULL AUTO_INCREMENT,
   `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `originRoom` int NOT NULL,
@@ -249,22 +249,22 @@ CREATE TABLE `invalid_moves` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `invalid_moves`
+-- Dumping data for table `invalid_move`
 --
 
-LOCK TABLES `invalid_moves` WRITE;
-/*!40000 ALTER TABLE `invalid_moves` DISABLE KEYS */;
-/*!40000 ALTER TABLE `invalid_moves` ENABLE KEYS */;
+LOCK TABLES `invalid_move` WRITE;
+/*!40000 ALTER TABLE `invalid_move` DISABLE KEYS */;
+/*!40000 ALTER TABLE `invalid_move` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
--- Table structure for table `outliers`
+-- Table structure for table `outlier`
 --
 
-DROP TABLE IF EXISTS `outliers`;
+DROP TABLE IF EXISTS `outlier`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `outliers` (
+CREATE TABLE `outlier` (
   `id` int NOT NULL AUTO_INCREMENT,
   `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `sensor` varchar(10) NOT NULL,
@@ -276,22 +276,22 @@ CREATE TABLE `outliers` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `outliers`
+-- Dumping data for table `outlier`
 --
 
-LOCK TABLES `outliers` WRITE;
-/*!40000 ALTER TABLE `outliers` DISABLE KEYS */;
-/*!40000 ALTER TABLE `outliers` ENABLE KEYS */;
+LOCK TABLES `outlier` WRITE;
+/*!40000 ALTER TABLE `outlier` DISABLE KEYS */;
+/*!40000 ALTER TABLE `outlier` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
--- Table structure for table `actions`
+-- Table structure for table `action`
 --
 
-DROP TABLE IF EXISTS `actions`;
+DROP TABLE IF EXISTS `action`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `actions` (
+CREATE TABLE `action` (
   `id` int NOT NULL AUTO_INCREMENT,
   `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `action_type` varchar(50) NOT NULL,
@@ -300,7 +300,7 @@ CREATE TABLE `actions` (
   `simulation_id` int NOT NULL,
   PRIMARY KEY (`id`),
   KEY `fk_actions_simulation` (`simulation_id`),
-  CONSTRAINT `fk_actions_simulation`
+  CONSTRAINT `fk_action_simulation`
     FOREIGN KEY (`simulation_id`) REFERENCES `simulation`(`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -309,19 +309,19 @@ CREATE TABLE `actions` (
 -- Dumping data for table `actions`
 --
 
-LOCK TABLES `actions` WRITE;
-/*!40000 ALTER TABLE `actions` DISABLE KEYS */;
-/*!40000 ALTER TABLE `actions` ENABLE KEYS */;
+LOCK TABLES `action` WRITE;
+/*!40000 ALTER TABLE `action` DISABLE KEYS */;
+/*!40000 ALTER TABLE `action` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
--- Table structure for table `processed_events`
+-- Table structure for table `processed_event`
 --
 
-DROP TABLE IF EXISTS `processed_events`;
+DROP TABLE IF EXISTS `processed_event`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `processed_events` (
+CREATE TABLE `processed_event` (
   `id` int NOT NULL AUTO_INCREMENT,
   `mongo_id` varchar(50) NOT NULL,
   `processed_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -331,12 +331,12 @@ CREATE TABLE `processed_events` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `processed_events`
+-- Dumping data for table `processed_event`
 --
 
-LOCK TABLES `processed_events` WRITE;
-/*!40000 ALTER TABLE `processed_events` DISABLE KEYS */;
-/*!40000 ALTER TABLE `processed_events` ENABLE KEYS */;
+LOCK TABLES `processed_event` WRITE;
+/*!40000 ALTER TABLE `processed_event` DISABLE KEYS */;
+/*!40000 ALTER TABLE `processed_event` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
