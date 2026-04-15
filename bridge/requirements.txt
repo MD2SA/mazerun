@@ -2,3 +2,5 @@ dnspython==2.8.0
 paho-mqtt==2.1.0
 pymongo==4.16.0
 PyYAML==6.0.3
+mysql-connector-python>=9.0.0
+python-dotenv>=1.0.0
