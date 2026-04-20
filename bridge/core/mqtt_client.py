@@ -10,7 +10,7 @@ class MQTTClient:
 
         self.topics = topics
 
-        self.client = mqtt.Client(protocol=mqtt.MQTTv311)
+        self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1)
 
         self.client.on_connect = self.on_connect
         self.client.on_message = self.on_message
