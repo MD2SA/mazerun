@@ -35,7 +35,7 @@ class MongoManager:
             {"_id": data["destiny"]},
             {
                 "$inc": {"marsami_count": -1},
-                "$set": {"last_move": timestamp}
+                "$set": {"last_move": timestamp, "process_status": "pending", "game": 1}
             },
             upsert=True
         )
@@ -51,7 +51,7 @@ class MongoManager:
             {"_id": data["origin"]},
             {
                 "$inc": {"marsami_count": 1},
-                "$set": {"last_move": timestamp}
+                "$set": {"last_move": timestamp, "process_status": "pending", "game": 1}
             },
             upsert=True
         )
@@ -59,10 +59,12 @@ class MongoManager:
     def _save_move(self, data: dict, timestamp):
         result = self.db["moves"].insert_one({
             "player": data["player"],
+            "game": 1,
             "marsami": data["marsami"],
             "from": data["origin"],
             "to": data["destiny"],
             "status": data["status"],
+            "process_status": "pending",
             "timestamp": timestamp
         })
         print("Move saved:", result.inserted_id)
@@ -95,7 +97,9 @@ class MongoManager:
     def _handle_temperature(self, raw):
         data = {
             "player": raw["Player"],
+            "game": 1,
             "temperature": raw["Temperature"],
+            "process_status": "pending",
             "timestamp": datetime.fromisoformat(raw["Hour"])
         }
 
@@ -110,7 +114,9 @@ class MongoManager:
     def _handle_sound(self, raw):
         data = {
                 "player": raw["Player"],
+                "game": 1,
                 "sound": raw["Sound"],
+                "process_status": "pending",
                 "timestamp": datetime.fromisoformat(raw["Hour"])
         }
 
