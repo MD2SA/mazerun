@@ -14,16 +14,6 @@ CREATE TABLE `simulation` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB;
 
--- Table `corridor`
-CREATE TABLE `corridor` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `Rooma` int NOT NULL,
-  `Roomb` int NOT NULL,
-  `active` tinyint NOT NULL DEFAULT 1,
-  `distance` int NOT NULL DEFAULT 1,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB;
-
 -- Table `user`
 CREATE TABLE `user` (
   `email` varchar(50) NOT NULL,
@@ -35,8 +25,8 @@ CREATE TABLE `user` (
   PRIMARY KEY (`email`)
 ) ENGINE=InnoDB;
 
--- Table `measures`
-CREATE TABLE `measures` (
+-- Table `measure`
+CREATE TABLE `measure` (
   `id` int NOT NULL AUTO_INCREMENT,
   `time` timestamp NOT NULL,
   `originRoom` int NOT NULL,
@@ -48,12 +38,25 @@ CREATE TABLE `measures` (
   FOREIGN KEY (`simulation_id`) REFERENCES `simulation`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+-- Table `invalid_measure`
+CREATE TABLE `invalid_measure` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `time` timestamp NOT NULL,
+  `originRoom` int NOT NULL,
+  `destinyRoom` int NOT NULL,
+  `Marsami` int NOT NULL,
+  `Status` int NOT NULL,
+  `reason` varchar(100) NOT NULL,
+  `simulation_id` int NOT NULL,
+  PRIMARY KEY (`id`),
+  FOREIGN KEY (`simulation_id`) REFERENCES `simulation`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
 -- Table `temperature`
 CREATE TABLE `temperature` (
   `id` int NOT NULL AUTO_INCREMENT,
   `time` timestamp NOT NULL,
   `temperature` varchar(12) NOT NULL,
-  `room` int NOT NULL,
   `simulation_id` int NOT NULL,
   PRIMARY KEY (`id`),
   FOREIGN KEY (`simulation_id`) REFERENCES `simulation`(`id`) ON DELETE CASCADE
@@ -64,7 +67,6 @@ CREATE TABLE `sound` (
   `id` int NOT NULL AUTO_INCREMENT,
   `time` timestamp NOT NULL,
   `sound` varchar(12) NOT NULL,
-  `room` int NOT NULL,
   `simulation_id` int NOT NULL,
   PRIMARY KEY (`id`),
   FOREIGN KEY (`simulation_id`) REFERENCES `simulation`(`id`) ON DELETE CASCADE
@@ -95,3 +97,29 @@ CREATE TABLE `ocupation` (
   PRIMARY KEY (`id`, `Room`),
   FOREIGN KEY (`simulation_id`) REFERENCES `simulation`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB;
+
+-- Table `sound_outlier`
+CREATE TABLE `sound_outlier` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `time` timestamp NOT NULL,
+  `sensor` varchar(10) NOT NULL,
+  `value` decimal(10,2) NOT NULL,
+  `reason` varchar(100) NOT NULL,
+  `simulation_id` int NOT NULL,
+  PRIMARY KEY (`id`),
+  FOREIGN KEY (`simulation_id`) REFERENCES `simulation`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Table `action`
+CREATE TABLE `action` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `time` timestamp NOT NULL,
+  `action_type` varchar(50) NOT NULL,
+  `target` varchar(50) NOT NULL,
+  `value` int NOT NULL,
+  `simulation_id` int NOT NULL,
+  PRIMARY KEY (`id`),
+  FOREIGN KEY (`simulation_id`) REFERENCES `simulation`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+
