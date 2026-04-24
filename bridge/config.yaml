@@ -1,8 +1,27 @@
 mqtt:
   broker: "broker.hivemq.com"
   port: 1883
-  topic: "pisid_mazemov_25" # 25 is the number of our group
+  # 25 is the number of our group
+  topics:
+    - pisid_mazemov_25
+    - pisid_mazetemp_25
+    - pisid_mazesound_25
+    - pisid_mazeact
 
 mongo:
   uri: "mongodb://localhost:27017"
   db: "game"
+
+mysql:
+  consulting:
+    host: "194.210.86.10"
+    port: 3306
+    user: "aluno"
+    password: "aluno"
+    db: "maze"
+  saving:
+    host: "localhost"
+    port: 3306
+    user: "root"
+    password: "root"
+    db: "mazerun"

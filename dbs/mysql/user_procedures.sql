@@ -1,0 +1,1 @@
+# write here the stored procedures to manage the table 'user'
