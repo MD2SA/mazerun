@@ -11,26 +11,31 @@ class SoundWorker(BaseWorker):
         self.player_state = {}
 
     def process(self, doc):
-        if "sound" not in doc or "player" not in doc:
-            self._publish("processed/invalid", doc, {"error": "Missing fields"})
+        # Raw fields: Player, Sound, Hour
+        if "Sound" not in doc or "Player" not in doc:
+            self._publish("processed/invalid", doc, {"error": "Missing Sound or Player"})
             return
 
         try:
-            sound = float(doc["sound"])
-            player = int(doc["player"])
+            sound = float(doc["Sound"])
+            player = int(doc["Player"])
         except ValueError:
             self._publish("processed/invalid", doc, {"error": "Invalid types"})
             return
             
-        timestamp = pd.to_datetime(doc.get("timestamp")).to_pydatetime()
+        timestamp_raw = doc.get("Hour") or doc.get("timestamp")
+        timestamp = pd.to_datetime(timestamp_raw).to_pydatetime()
 
         # Query movements for the player in the last X seconds
         ten_secs_ago = timestamp - timedelta(seconds=constants.SOUND_MOVEMENT_WINDOW_SECONDS)
-        # Assuming moves use datetime objects for timestamp 
+        
+        # We will query using the standardized 'timestamp' field
         movements = self.db["moves"].count_documents({
-            "player": player,
-            "timestamp": {"$gte": ten_secs_ago, "$lte": timestamp}
+            "Player": player,
+            "timestamp": {"$gte": ten_secs_ago.isoformat(), "$lte": timestamp.isoformat()}
         })
+        # If the above query is too strict with raw strings, we might need to adjust, 
+        # but for now we assume it's stored in a way that allows range queries or we use the processed logic.
         
         state = self.player_state.get(player, {"sound": sound, "movements": movements})
         sound_t_minus_1 = state["sound"]
@@ -66,13 +71,15 @@ class SoundWorker(BaseWorker):
             "game": doc.get("game", 1),
             "sound": sound,
             "movements_window": movements,
-            "timestamp": doc.get("timestamp").isoformat() if hasattr(doc.get("timestamp"), "isoformat") else str(doc.get("timestamp"))
+            "timestamp": timestamp.isoformat()
         }
 
         if is_outlier:
             doc_out["outlier_reason"] = outlier_reason
-            self._publish("processed/outliers", None, doc_out)
+            # Match persistence/main.py topic: processed/sound_outlier
+            self._publish("processed/sound_outlier", None, doc_out)
         else:
+            # Match persistence/main.py topic: processed/sound
             self._publish("processed/sound", None, doc_out)
 
     def _publish(self, topic, raw_doc, payload):

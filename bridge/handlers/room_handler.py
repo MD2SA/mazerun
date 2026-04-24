@@ -9,10 +9,11 @@ class RoomWorker(BaseWorker):
         room_id = doc.get("_id")
         
         # Room doc processing: query odd/even marsamis in this room
+        # In the raw moves collection, destiny is "RoomDestiny" and marsami is "Marsami"
         pipeline = [
-            {"$match": {"to": room_id}},
+            {"$match": {"RoomDestiny": room_id}},
             {"$group": {
-                "_id": {"marsami": "$marsami"},
+                "_id": {"marsami": "$Marsami"},
                 "count": {"$sum": 1} # Total times marsami went to room
             }}
         ]
@@ -24,17 +25,18 @@ class RoomWorker(BaseWorker):
         
         for r in results:
             marsami_id = r["_id"]["marsami"]
-            if marsami_id % 2 == 0:
-                even_count += 1
-            else:
-                odd_count += 1
-                
+            if marsami_id is not None:
+                if int(marsami_id) % 2 == 0:
+                    even_count += 1
+                else:
+                    odd_count += 1
+                 
         doc_out = {
             "room": room_id,
             "game": doc.get("game", 1),
             "odd_marsamis": odd_count,
             "even_marsamis": even_count,
-            "last_move": doc.get("last_move").isoformat() if doc.get("last_move") else None
+            "timestamp": doc.get("last_update").isoformat() if hasattr(doc.get("last_update"), "isoformat") else str(doc.get("last_update"))
         }
         
         if odd_count > 0 and odd_count == even_count:
@@ -45,9 +47,18 @@ class RoomWorker(BaseWorker):
                 "room": room_id,
                 "reason": "odd_equals_even"
             }
+            # Actuator topic
             self.mqtt_client.client.publish("actuator/score", json.dumps(action_payload))
-            self.mqtt_client.client.publish("processed/actions", json.dumps(action_payload))
+            # Match persistence/main.py topic: processed/message (for actions)
+            # Actually, persistence has handle_message for processed/message
+            self.mqtt_client.client.publish("processed/message", json.dumps(action_payload))
             
             doc_out["scored"] = True
         
-        self.mqtt_client.client.publish("processed/rooms", json.dumps(doc_out))
+        # Match persistence/main.py topic: processed/ocupation
+        self.mqtt_client.client.publish("processed/ocupation", json.dumps(doc_out))
+
+    def _publish(self, topic, raw_doc, payload):
+        if raw_doc and "_id" in raw_doc:
+            payload["_id"] = str(raw_doc["_id"])
+        self.mqtt_client.client.publish(topic, json.dumps(payload))

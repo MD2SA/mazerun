@@ -34,6 +34,10 @@ class MySQLManager:
         Validates if a move is valid by checking the corridor table.
         Table schema: ID; Rooma; Roomb; active; distance
         """
+        # Room 0 is the pre-room, transitions to/from it are always valid
+        if room_a == 0:
+            return True
+            
         self.ensure_connection()
         if not self.connection:
             return False # Fail strict or allow? If DB is down, consider invalid.

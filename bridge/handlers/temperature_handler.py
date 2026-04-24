@@ -13,42 +13,46 @@ class TemperatureWorker(BaseWorker):
         self.last_alert_time = {}
 
     def process(self, doc):
-        if "temperature" not in doc or "player" not in doc:
-            self._publish_error("processed/invalid", doc, "Missing temperature or player")
+        # Raw fields: Player, Temperature, Hour
+        if "Temperature" not in doc or "Player" not in doc:
+            self._publish_error("processed/invalid", doc, "Missing Temperature or Player")
             return
 
         # Validate type
         try:
-            temp = float(doc["temperature"])
-            player = int(doc["player"])
+            temp = float(doc["Temperature"])
+            player = int(doc["Player"])
         except ValueError:
             self._publish_error("processed/invalid", doc, "Invalid temperature format")
             return
             
+        timestamp = doc.get("Hour") or doc.get("timestamp")
+        
         doc_out = {
             "player": player,
             "game": doc.get("game", 1),
             "temperature": temp,
-            "timestamp": doc.get("timestamp").isoformat() if hasattr(doc.get("timestamp"), "isoformat") else str(doc.get("timestamp"))
+            "timestamp": timestamp.isoformat() if hasattr(timestamp, "isoformat") else str(timestamp)
         }
 
         # Check threshold
         if temp >= self.threshold:
-            current_time = pd.to_datetime(doc.get("timestamp"))
+            current_time = pd.to_datetime(timestamp)
             
             # Anti-spam window
             last_alert = self.last_alert_time.get(player)
             if not last_alert or (current_time - last_alert).total_seconds() > self.delta_t_seconds:
-                # Generate Alert
-                self.mqtt_client.client.publish("processed/alerts", json.dumps({
+                # Generate Alert - Match persistence/main.py topic: processed/message
+                self.mqtt_client.client.publish("processed/message", json.dumps({
                     "player": player,
                     "game": doc.get("game", 1),
+                    "value": temp,
                     "alert": f"High temperature detected ({temp})",
                     "timestamp": doc_out["timestamp"]
                 }))
                 self.last_alert_time[player] = current_time
 
-        # Always publish valid temperature if format is OK
+        # Always publish valid temperature - Match persistence/main.py topic: processed/temperature
         self.mqtt_client.client.publish("processed/temperature", json.dumps(doc_out))
 
     def _publish_error(self, topic, doc, reason):
