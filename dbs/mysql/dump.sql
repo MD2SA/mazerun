@@ -152,6 +152,7 @@ DROP TABLE IF EXISTS `ocupation`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `ocupation` (
   `id` int NOT NULL AUTO_INCREMENT,
+  `id` int NOT NULL AUTO_INCREMENT,
   `oddMarsamis` int NOT NULL,
   `evenMarsamis` int NOT NULL,
   `Room` int NOT NULL,
