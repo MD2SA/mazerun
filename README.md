@@ -3,6 +3,10 @@
   <img src="assets/flow.png" width="600" />
 </p>
 
+<p align="center">
+  <img src="assets/pipeline.png" witdth="600" />
+</p>
+
 ## How to run:
 
 1. Start the docker container:
