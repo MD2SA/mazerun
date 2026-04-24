@@ -6,6 +6,7 @@ mqtt:
     - pisid_mazemov_25
     - pisid_mazetemp_25
     - pisid_mazesound_25
+    - pisid_mazeact
 
 mongo:
   uri: "mongodb://localhost:27017"

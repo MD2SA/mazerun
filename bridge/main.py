@@ -21,7 +21,7 @@ mysql_config = config.get("mysql", {})
 
 mongo_manager = MongoManager(
     uri=mongo_config.get("uri", "mongodb://localhost:27017"),
-    db=mongo_config.get("db", "game"),
+    db_name=mongo_config.get("db", "game"),
 )
 
 mysql_config = config.get("mysql", {})

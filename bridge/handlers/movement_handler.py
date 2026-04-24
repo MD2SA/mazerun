@@ -7,7 +7,8 @@ class MovementWorker(BaseWorker):
         self.mysql_manager = mysql_manager
 
     def process(self, doc):
-        required_fields = ["player", "from", "to", "marsami"]
+        # Raw fields: Player, RoomOrigin, RoomDestiny, Marsami
+        required_fields = ["Player", "RoomOrigin", "RoomDestiny", "Marsami"]
         
         # 1. Validate missing fields
         missing = [f for f in required_fields if f not in doc]
@@ -17,10 +18,10 @@ class MovementWorker(BaseWorker):
             
         # 2. Validate types
         try:
-            player = int(doc["player"])
-            origin = int(doc["from"])
-            destiny = int(doc["to"])
-            marsami = int(doc["marsami"])
+            player = int(doc["Player"])
+            origin = int(doc["RoomOrigin"])
+            destiny = int(doc["RoomDestiny"])
+            marsami = int(doc["Marsami"])
         except ValueError:
             self._publish_invalid(doc, "Invalid types, expected integers")
             return
@@ -30,21 +31,29 @@ class MovementWorker(BaseWorker):
         
         doc_out = {
             "player": player,
-            "game": doc.get("game", 1),
+            "game": doc.get("game", 1), # Default to 1 if not present
             "from": origin,
             "to": destiny,
             "marsami": marsami,
-            "timestamp": doc.get("timestamp").isoformat() if hasattr(doc.get("timestamp"), "isoformat") else str(doc.get("timestamp"))
+            "timestamp": doc.get("Hour") or doc.get("timestamp")
         }
+        
+        # Ensure timestamp is string
+        if hasattr(doc_out["timestamp"], "isoformat"):
+            doc_out["timestamp"] = doc_out["timestamp"].isoformat()
+        else:
+            doc_out["timestamp"] = str(doc_out["timestamp"])
 
         if is_valid:
-            self.mqtt_client.client.publish("processed/moves", json.dumps(doc_out))
+            # Match persistence/main.py expected topic: processed/measure
+            self.mqtt_client.client.publish("processed/measure", json.dumps(doc_out))
         else:
             doc_out["error"] = "Invalid room transition"
-            self.mqtt_client.client.publish("processed/invalid_moves", json.dumps(doc_out))
+            self.mqtt_client.client.publish("processed/invalid_measure", json.dumps(doc_out))
 
     def _publish_invalid(self, doc, reason):
         payload = {"_id": str(doc["_id"]), "error": reason}
-        if "from" in doc: payload["from"] = doc["from"]
-        if "to" in doc: payload["to"] = doc["to"]
-        self.mqtt_client.client.publish("processed/invalid_moves", json.dumps(payload))
+        if "RoomOrigin" in doc: payload["from"] = doc["RoomOrigin"]
+        if "RoomDestiny" in doc: payload["to"] = doc["RoomDestiny"]
+        # Match persistence/main.py expected topic: processed/invalid_measure
+        self.mqtt_client.client.publish("processed/invalid_measure", json.dumps(payload))
