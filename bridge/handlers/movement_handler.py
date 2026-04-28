@@ -30,6 +30,8 @@ class MovementWorker(BaseWorker):
         is_valid = self.mysql_manager.is_valid_move(origin, destiny)
         
         doc_out = {
+            "mongo_id": str(doc["_id"]),
+            "collection": "moves",
             "player": player,
             "game": doc.get("game", 1), # Default to 1 if not present
             "from": origin,

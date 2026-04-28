@@ -67,6 +67,8 @@ class SoundWorker(BaseWorker):
         self.player_state[player] = {"sound": sound, "movements": movements}
 
         doc_out = {
+            "mongo_id": str(doc["_id"]),
+            "collection": "sound",
             "player": player,
             "game": doc.get("game", 1),
             "sound": sound,
@@ -84,5 +86,6 @@ class SoundWorker(BaseWorker):
 
     def _publish(self, topic, raw_doc, payload):
         if raw_doc and "_id" in raw_doc:
-            payload["_id"] = str(raw_doc["_id"])
+            payload["mongo_id"] = str(raw_doc["_id"])
+            payload["collection"] = "sound"
         self.mqtt_client.client.publish(topic, json.dumps(payload))

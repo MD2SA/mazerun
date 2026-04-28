@@ -32,6 +32,8 @@ class RoomWorker(BaseWorker):
                     odd_count += 1
                  
         doc_out = {
+            "mongo_id": str(doc["_id"]),
+            "collection": "rooms",
             "room": room_id,
             "game": doc.get("game", 1),
             "odd_marsamis": odd_count,
@@ -51,7 +53,10 @@ class RoomWorker(BaseWorker):
             self.mqtt_client.client.publish("actuator/score", json.dumps(action_payload))
             # Match persistence/main.py topic: processed/message (for actions)
             # Actually, persistence has handle_message for processed/message
-            self.mqtt_client.client.publish("processed/message", json.dumps(action_payload))
+            action_copy = action_payload.copy()
+            action_copy["mongo_id"] = doc_out["mongo_id"]
+            action_copy["collection"] = doc_out["collection"]
+            self.mqtt_client.client.publish("processed/message", json.dumps(action_copy))
             
             doc_out["scored"] = True
         
@@ -60,5 +65,6 @@ class RoomWorker(BaseWorker):
 
     def _publish(self, topic, raw_doc, payload):
         if raw_doc and "_id" in raw_doc:
-            payload["_id"] = str(raw_doc["_id"])
+            payload["mongo_id"] = str(raw_doc["_id"])
+            payload["collection"] = "rooms"
         self.mqtt_client.client.publish(topic, json.dumps(payload))
