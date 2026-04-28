@@ -25,8 +25,9 @@ class MQTTClient:
             print("[MQTT] Connected")
 
             for topic in self.topics:
-                client.subscribe(topic)
-                print("[MQTT] Subscribed to", topic)
+                qos = 1 if "mazemov" in topic or "mazetemp" in topic else 0
+                client.subscribe(topic, qos=qos)
+                print(f"[MQTT] Subscribed to {topic} with QoS {qos}")
 
     def on_message(self, client, userdata, msg):
 

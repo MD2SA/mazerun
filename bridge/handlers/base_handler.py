@@ -27,11 +27,7 @@ class BaseWorker(threading.Thread):
                     # Successfully acquired lock
                     try:
                         self.process(doc)
-                        # Mark as done
-                        self.collection.update_one(
-                            {"_id": doc_id},
-                            {"$set": {"process_status": "done"}}
-                        )
+                        # Mark as done is now handled by persistence service after MySQL confirmation
                     except Exception as e:
                         print(f"[Worker:{self.collection_name}] Error processing doc {doc_id}: {e}")
                         traceback.print_exc()
