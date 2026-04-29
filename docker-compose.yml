@@ -1,7 +1,7 @@
 services:
 
   mongo:
-    image: mongo:latest
+    image: mongo:7
     container_name: mongo
     ports:
       - "27017:27017"
@@ -10,7 +10,7 @@ services:
   # TODO: IMPLEMENT REPLICAS
 
   mysql:
-    image: mysql:latest
+    image: mysql:8.0
     container_name: mysql
     ports:
       - "3306:3306"
@@ -27,6 +27,16 @@ services:
       - "8080:80"
     environment:
       PMA_HOST: mysql
+    depends_on:
+      - mysql
+
+  php:
+    image: php:8.3-apache
+    container_name: php
+    ports:
+      - "8000:80"
+    volumes:
+      - ./php:/var/www/html
     depends_on:
       - mysql
 
