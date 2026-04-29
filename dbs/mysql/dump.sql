@@ -87,7 +87,7 @@ UNLOCK TABLES;
 DROP TABLE IF EXISTS `measure`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `measures` (
+CREATE TABLE `measure` (
   `id` int NOT NULL AUTO_INCREMENT,
   `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `originRoom` int NOT NULL,
@@ -96,8 +96,8 @@ CREATE TABLE `measures` (
   `Status` int NOT NULL,
   `simulation_id` int NOT NULL,
   PRIMARY KEY (`id`),
-  KEY `fk_measures_simulation` (`simulation_id`),
-  CONSTRAINT `fk_measures_simulation`
+  KEY `fk_measure_simulation` (`simulation_id`),
+  CONSTRAINT `fk_measure_simulation`
     FOREIGN KEY (`simulation_id`) REFERENCES `simulation`(`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -106,9 +106,9 @@ CREATE TABLE `measures` (
 -- Dumping data for table `measure`
 --
 
-LOCK TABLES `measures` WRITE;
-/*!40000 ALTER TABLE `measures` DISABLE KEYS */;
-/*!40000 ALTER TABLE `measures` ENABLE KEYS */;
+LOCK TABLES `measure` WRITE;
+/*!40000 ALTER TABLE `measure` DISABLE KEYS */;
+/*!40000 ALTER TABLE `measure` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -151,7 +151,6 @@ DROP TABLE IF EXISTS `ocupation`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `ocupation` (
-  `id` int NOT NULL AUTO_INCREMENT,
   `id` int NOT NULL AUTO_INCREMENT,
   `oddMarsamis` int NOT NULL,
   `evenMarsamis` int NOT NULL,
@@ -228,13 +227,13 @@ LOCK TABLES `temperature` WRITE;
 UNLOCK TABLES;
 
 --
--- Table structure for table `invalid_moves`
+-- Table structure for table `invalid_measure`
 --
 
-DROP TABLE IF EXISTS `invalid_move`;
+DROP TABLE IF EXISTS `invalid_measure`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `invalid_move` (
+CREATE TABLE `invalid_measure` (
   `id` int NOT NULL AUTO_INCREMENT,
   `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `originRoom` int NOT NULL,
@@ -244,28 +243,28 @@ CREATE TABLE `invalid_move` (
   `reason` varchar(100) NOT NULL,
   `simulation_id` int NOT NULL,
   PRIMARY KEY (`id`),
-  KEY `fk_invalid_moves_simulation` (`simulation_id`),
-  CONSTRAINT `fk_invalid_moves_simulation` FOREIGN KEY (`simulation_id`) REFERENCES `simulation` (`id`) ON DELETE CASCADE
+  KEY `fk_invalid_measure_simulation` (`simulation_id`),
+  CONSTRAINT `fk_invalid_measure_simulation` FOREIGN KEY (`simulation_id`) REFERENCES `simulation` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `invalid_move`
+-- Dumping data for table `invalid_measure`
 --
 
-LOCK TABLES `invalid_move` WRITE;
-/*!40000 ALTER TABLE `invalid_move` DISABLE KEYS */;
-/*!40000 ALTER TABLE `invalid_move` ENABLE KEYS */;
+LOCK TABLES `invalid_measure` WRITE;
+/*!40000 ALTER TABLE `invalid_measure` DISABLE KEYS */;
+/*!40000 ALTER TABLE `invalid_measure` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
--- Table structure for table `outlier`
+-- Table structure for table `sound_outlier`
 --
 
-DROP TABLE IF EXISTS `outlier`;
+DROP TABLE IF EXISTS `sound_outlier`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `outlier` (
+CREATE TABLE `sound_outlier` (
   `id` int NOT NULL AUTO_INCREMENT,
   `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `sensor` varchar(10) NOT NULL,
@@ -277,12 +276,12 @@ CREATE TABLE `outlier` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `outlier`
+-- Dumping data for table `sound_outlier`
 --
 
-LOCK TABLES `outlier` WRITE;
-/*!40000 ALTER TABLE `outlier` DISABLE KEYS */;
-/*!40000 ALTER TABLE `outlier` ENABLE KEYS */;
+LOCK TABLES `sound_outlier` WRITE;
+/*!40000 ALTER TABLE `sound_outlier` DISABLE KEYS */;
+/*!40000 ALTER TABLE `sound_outlier` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
