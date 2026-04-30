@@ -10,6 +10,7 @@ from handlers.movement_handler import MovementWorker
 from handlers.temperature_handler import TemperatureWorker
 from handlers.sound_handler import SoundWorker
 from handlers.room_handler import RoomWorker
+from handlers.retry_worker import RetryWorker
 
 # Load YAML config
 with open("config.yaml") as f:
@@ -39,10 +40,14 @@ mysql_manager = MySQLManager(
 mysql_manager.connect()
 
 # Start MQTT client
+topics = mqtt_config.get("topics", [])
+if "persistence/ack" not in topics:
+    topics.append("persistence/ack")
+
 mqtt = MQTTClient(
     broker=mqtt_config.get("broker"),
     port=mqtt_config.get("port"),
-    topics=mqtt_config.get("topics"),
+    topics=topics,
     manager=mongo_manager,
 )
 
@@ -62,6 +67,10 @@ movement_worker.start()
 temperature_worker.start()
 sound_worker.start()
 room_worker.start()
+
+# Start Retry Worker (timeout 30 seconds)
+retry_worker = RetryWorker(dispatcher.db, timeout_seconds=30)
+retry_worker.start()
 
 # Start MQTT Client in a daemon thread so it doesn't block
 threading.Thread(target=mqtt.start, daemon=True).start()

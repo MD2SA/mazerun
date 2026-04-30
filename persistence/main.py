@@ -7,8 +7,6 @@ import paho.mqtt.client as mqtt
 import mysql.connector
 from mysql.connector import Error
 from dateutil import parser as dateutil_parser
-from pymongo import MongoClient
-from bson import ObjectId
 
 # Load YAML config
 with open("config.yaml") as f:
@@ -37,18 +35,7 @@ class PersistenceService:
         }
 
         self.connect_db()
-        self.connect_mongo()
         self.load_corridors()
-
-    def connect_mongo(self):
-        try:
-            mongo_cfg = config.get("mongo", {})
-            self.mongo_client = MongoClient(mongo_cfg.get("uri", "mongodb://localhost:27017"))
-            self.mongo_db = self.mongo_client[mongo_cfg.get("db", "game")]
-            print(f"[Persistence] MongoDB Connected for status updates: {mongo_cfg.get('db')}")
-        except Exception as e:
-            print(f"[Persistence] Error connecting to MongoDB: {e}")
-            self.mongo_db = None
 
     def load_corridors(self):
         try:
@@ -104,27 +91,44 @@ class PersistenceService:
     def call_sp(self, sp_name, args):
         if not self.db or not self.db.is_connected():
             self.connect_db()
-        if not self.db: return False
+        if not self.db: return 0
 
         cursor = None
         try:
             cursor = self.db.cursor()
             cursor.callproc(sp_name, args)
+
+            # Fetch result from stored procedure (expected to return 1 on success)
+            result = 0
+            for res in cursor.stored_results():
+                row = res.fetchone()
+                if row:
+                    result = row[0]
+
             self.db.commit()
-            return True
+            return result
         except Error as e:
             print(f"[Persistence] SP Call Error ({sp_name}): {e}")
             try:
                 self.db.rollback()
             except Error:
                 pass
-            return False
+            return 0
         finally:
             if cursor:
                 try:
                     cursor.close()
                 except Error:
                     pass
+
+    def send_ack(self, client, payload):
+        """Sends an acknowledgment back to MQTT indicating successful persistence."""
+        ack_payload = {
+            "mongo_id": payload.get("mongo_id"),
+            "collection": payload.get("collection"),
+        }
+        client.publish("persistence/ack", json.dumps(ack_payload))
+        print(f"[Persistence] ACK sent for mongo_id: {ack_payload.get('mongo_id')}")
 
     def on_message(self, client, userdata, msg):
         try:
@@ -165,24 +169,7 @@ class PersistenceService:
 
             handler = self.topic_handlers.get(topic)
             if handler:
-                success = handler(payload, dt, sim_id)
-                
-                # If SQL was successful, mark MongoDB document as 'done'
-                mongo_id = payload.get("mongo_id")
-                collection = payload.get("collection")
-                
-                if success:
-                    if not mongo_id or not collection:
-                        print(f"[Persistence] Warning: Missing mongo_id or collection in payload from {topic}. Skipping status update.")
-                    elif self.mongo_db is not None:
-                        try:
-                            self.mongo_db[collection].update_one(
-                                {"_id": ObjectId(mongo_id)},
-                                {"$set": {"process_status": "done"}}
-                            )
-                            print(f"[Persistence] Marked {collection}/{mongo_id} as DONE in MongoDB")
-                        except Exception as e:
-                            print(f"[Persistence] Error updating MongoDB status for {mongo_id}: {e}")
+                handler(client, payload, dt, sim_id)
             else:
                 print(f"[Persistence] No handler registered for topic: {topic}")
 
@@ -192,22 +179,27 @@ class PersistenceService:
 
     # --- Handlers for each topic ---
 
-    def handle_measure(self, payload, dt, sim_id):
-        return self.call_sp("sp_insert_measure", (dt, payload["from"], payload["to"], payload["marsami"], payload.get("status", 1), sim_id, payload.get("mongo_id")))
+    def handle_measure(self, client, payload, dt, sim_id):
+        res = self.call_sp("sp_insert_measure", (dt, payload["from"], payload["to"], payload["marsami"], payload.get("status", 1), sim_id))
+        if res == 1: self.send_ack(client, payload)
 
-    def handle_invalid_measure(self, payload, dt, sim_id):
-        return self.call_sp("sp_insert_invalid_measure", (dt, payload.get("from", 0), payload.get("to", 0), payload.get("marsami", 0), 0, payload.get("error", "unknown"), sim_id, payload.get("mongo_id")))
+    def handle_invalid_measure(self, client, payload, dt, sim_id):
+        res = self.call_sp("sp_insert_invalid_measure", (dt, payload.get("from", 0), payload.get("to", 0), payload.get("marsami", 0), 0, payload.get("error", "unknown"), sim_id))
+        if res == 1: self.send_ack(client, payload)
 
-    def handle_temperature(self, payload, dt, sim_id):
-        return self.call_sp("sp_insert_temperature", (dt, float(payload["temperature"]), sim_id, payload.get("mongo_id")))
+    def handle_temperature(self, client, payload, dt, sim_id):
+        res = self.call_sp("sp_insert_temperature", (dt, float(payload["temperature"]), sim_id))
+        if res == 1: self.send_ack(client, payload)
 
-    def handle_sound(self, payload, dt, sim_id):
-        return self.call_sp("sp_insert_sound", (dt, float(payload["sound"]), sim_id, payload.get("mongo_id")))
+    def handle_sound(self, client, payload, dt, sim_id):
+        res = self.call_sp("sp_insert_sound", (dt, float(payload["sound"]), sim_id))
+        if res == 1: self.send_ack(client, payload)
 
-    def handle_sound_outlier(self, payload, dt, sim_id):
-        return self.call_sp("sp_insert_sound_outlier", (dt, "sound", payload.get("sound", 0), payload.get("outlier_reason", ""), sim_id, payload.get("mongo_id")))
+    def handle_sound_outlier(self, client, payload, dt, sim_id):
+        res = self.call_sp("sp_insert_sound_outlier", (dt, "sound", payload.get("sound", 0), payload.get("outlier_reason", ""), sim_id))
+        if res == 1: self.send_ack(client, payload)
 
-    def handle_message(self, payload, dt, sim_id):
+    def handle_message(self, client, payload, dt, sim_id):
         # Determine strict sensor values: "1" for temperature, "2" for sound
         raw_sensor = payload.get("sensor", "temperature").lower()
         sensor = "2" if raw_sensor == "sound" else "1"
@@ -222,10 +214,13 @@ class PersistenceService:
             value = payload.get("value", 0)
             alert_type = payload.get("alertType", "HIGH_TEMP")
             alert = payload.get("alert", "")
-            
-        return self.call_sp("sp_insert_message", (dt, sensor, value, alert_type, alert, sim_id, payload.get("mongo_id")))
-    def handle_ocupation(self, payload, dt, sim_id):
-        return self.call_sp("sp_update_ocupation", (payload.get("room"), payload.get("odd_marsamis", 0), payload.get("even_marsamis", 0), sim_id, payload.get("mongo_id")))
+
+        res = self.call_sp("sp_insert_message", (dt, sensor, value, alert_type, alert, sim_id))
+        if res == 1: self.send_ack(client, payload)
+
+    def handle_ocupation(self, client, payload, dt, sim_id):
+        res = self.call_sp("sp_update_ocupation", (payload.get("room"), payload.get("odd_marsamis", 0), payload.get("even_marsamis", 0), sim_id))
+        if res == 1: self.send_ack(client, payload)
 
 if __name__ == "__main__":
     service = PersistenceService()
@@ -251,7 +246,8 @@ if __name__ == "__main__":
     ]
 
     for t in topics:
-        client.subscribe(t, qos=1)
-        
+        client.subscribe(t)
+
     print("[Persistence] Listening for processed events...")
     client.loop_forever()
+

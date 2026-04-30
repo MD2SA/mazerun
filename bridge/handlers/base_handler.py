@@ -16,18 +16,23 @@ class BaseWorker(threading.Thread):
             try:
                 change_id, doc = self.queue.get()
                 doc_id = doc["_id"]
-                
+
                 # Atomic attempt to acquire document for processing
+                from datetime import datetime, timezone
                 result = self.collection.find_one_and_update(
                     {"_id": doc_id, "process_status": "pending"},
-                    {"$set": {"process_status": "processing"}}
+                    {
+                        "$set": {
+                            "process_status": "processing",
+                            "sent_at": datetime.now(timezone.utc)
+                        }
+                    }
                 )
-                
+
                 if result:
                     # Successfully acquired lock
                     try:
                         self.process(doc)
-                        # Mark as done is now handled by persistence service after MySQL confirmation
                     except Exception as e:
                         print(f"[Worker:{self.collection_name}] Error processing doc {doc_id}: {e}")
                         traceback.print_exc()
