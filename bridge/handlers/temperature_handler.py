@@ -25,9 +25,9 @@ class TemperatureWorker(BaseWorker):
         except ValueError:
             self._publish_error("processed/invalid", doc, "Invalid temperature format")
             return
-            
+
         timestamp = doc.get("Hour") or doc.get("timestamp")
-        
+
         doc_out = {
             "mongo_id": str(doc["_id"]),
             "collection": "temperature",
@@ -40,7 +40,7 @@ class TemperatureWorker(BaseWorker):
         # Check threshold
         if temp >= self.threshold:
             current_time = pd.to_datetime(timestamp)
-            
+
             # Anti-spam window
             last_alert = self.last_alert_time.get(player)
             if not last_alert or (current_time - last_alert).total_seconds() > self.delta_t_seconds:

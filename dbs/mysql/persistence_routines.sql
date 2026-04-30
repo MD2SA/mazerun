@@ -17,6 +17,7 @@ BEGIN
             INSERT IGNORE INTO processed_event (mongo_id) VALUES (p_mongo_id);
         END IF;
     END IF;
+    SELECT 1;
 END //
 
 DROP PROCEDURE IF EXISTS sp_insert_invalid_measure //
@@ -36,6 +37,7 @@ BEGIN
             INSERT IGNORE INTO processed_event (mongo_id) VALUES (p_mongo_id);
         END IF;
     END IF;
+    SELECT 1;
 END //
 
 DROP PROCEDURE IF EXISTS sp_insert_temperature //
@@ -54,6 +56,7 @@ BEGIN
             INSERT IGNORE INTO processed_event (mongo_id) VALUES (p_mongo_id);
         END IF;
     END IF;
+    SELECT 1;
 END //
 
 DROP PROCEDURE IF EXISTS sp_insert_sound //
@@ -72,6 +75,7 @@ BEGIN
             INSERT IGNORE INTO processed_event (mongo_id) VALUES (p_mongo_id);
         END IF;
     END IF;
+    SELECT 1;
 END //
 
 DROP PROCEDURE IF EXISTS sp_insert_sound_outlier //
@@ -91,6 +95,7 @@ BEGIN
             INSERT IGNORE INTO processed_event (mongo_id) VALUES (p_mongo_id);
         END IF;
     END IF;
+    SELECT 1;
 END //
 
 DROP PROCEDURE IF EXISTS sp_insert_message //
@@ -111,6 +116,7 @@ BEGIN
             INSERT IGNORE INTO processed_event (mongo_id) VALUES (p_mongo_id);
         END IF;
     END IF;
+    SELECT 1;
 END //
 
 DROP PROCEDURE IF EXISTS sp_update_ocupation //
@@ -121,9 +127,6 @@ CREATE PROCEDURE sp_update_ocupation(
 BEGIN
     -- Idempotency check
     IF p_mongo_id IS NOT NULL AND EXISTS (SELECT 1 FROM processed_event WHERE mongo_id = p_mongo_id) THEN
-        -- Already processed this specific update, but we might want to update anyway 
-        -- logic: for occupations, we usually want the LATEST. 
-        -- However, issue #6 asks for idempotency.
         BEGIN END;
     ELSE
         IF EXISTS (SELECT 1 FROM ocupation WHERE Room = p_room AND id = p_simulation_id) THEN
@@ -137,6 +140,7 @@ BEGIN
             INSERT IGNORE INTO processed_event (mongo_id) VALUES (p_mongo_id);
         END IF;
     END IF;
+    SELECT 1;
 END //
 
 DROP PROCEDURE IF EXISTS sp_insert_simulation //
