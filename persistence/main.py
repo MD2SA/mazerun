@@ -22,7 +22,7 @@ class PersistenceService:
         self.current_sim_id = None
         self.last_move_time = 0
         self.corridors = []
-        
+
         # Strategy pattern mapping
         self.topic_handlers = {
             "processed/measure": self.handle_measure,
@@ -33,7 +33,7 @@ class PersistenceService:
             "processed/message": self.handle_message,
             "processed/ocupation": self.handle_ocupation,
         }
-        
+
         self.connect_db()
         self.load_corridors()
 
@@ -73,7 +73,7 @@ class PersistenceService:
         if not self.db or not self.db.is_connected():
             self.connect_db()
         if not self.db: return
-        
+
         try:
             cursor = self.db.cursor()
             # 25 is the hardcoded team number
@@ -129,11 +129,11 @@ class PersistenceService:
 
             now = time.time()
             is_new_sim = False
-            
+
             # Create a simulation on the very first message to satisfy foreign key constraints
             if self.current_sim_id is None:
                 is_new_sim = True
-                
+
             # If this is a movement, check if the maze was idle for more than 60 seconds
             elif topic == "processed/measure":
                 if (now - self.last_move_time) > 60:
@@ -143,7 +143,7 @@ class PersistenceService:
             if is_new_sim:
                 self.create_new_simulation(dt)
                 self.last_move_time = now
-            
+
             sim_id = self.current_sim_id
 
             if not sim_id:
@@ -155,7 +155,7 @@ class PersistenceService:
                 handler(payload, dt, sim_id)
             else:
                 print(f"[Persistence] No handler registered for topic: {topic}")
-                
+
         except Exception as e:
             print(f"[Persistence] Error processing message on topic '{msg.topic}': {e}")
             traceback.print_exc()
@@ -192,24 +192,24 @@ class PersistenceService:
             value = payload.get("value", 0)
             alert_type = payload.get("alertType", "HIGH_TEMP")
             alert = payload.get("alert", "")
-            
+
         self.call_sp("sp_insert_message", (dt, sensor, value, alert_type, alert, sim_id))
     def handle_ocupation(self, payload, dt, sim_id):
         self.call_sp("sp_update_ocupation", (payload.get("room"), payload.get("odd_marsamis", 0), payload.get("even_marsamis", 0), sim_id))
 
 if __name__ == "__main__":
     service = PersistenceService()
-    
+
     # Initialize MQTT
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1)
     client.on_message = service.on_message
-    
+
     broker = mqtt_config.get("broker")
     port = mqtt_config.get("port")
-    
+
     print(f"[Persistence] Connecting to MQTT broker {broker}:{port}")
     client.connect(broker, port, 60)
-    
+
     topics = [
         "processed/measure",
         "processed/invalid_measure",
@@ -219,9 +219,9 @@ if __name__ == "__main__":
         "processed/message",
         "processed/ocupation",
     ]
-    
+
     for t in topics:
         client.subscribe(t)
-        
+
     print("[Persistence] Listening for processed events...")
     client.loop_forever()
