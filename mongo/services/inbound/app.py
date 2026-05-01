@@ -6,8 +6,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".
 
 from common.config_loader import load_config
 from common.mongo_connection import get_mongo_db
-from processor import InboundProcessor
-from mqtt_client import InboundMQTTClient
+from services.inbound.processor import InboundProcessor
+from services.inbound.mqtt_client import InboundMQTTClient
 
 def main():
     print("=== STARTING INBOUND SERVICE (MQTT -> MongoDB) ===")
@@ -16,8 +16,11 @@ def main():
     mqtt_config = config.get("mqtt", {})
     mongo_config = config.get("mongo", {})
 
+    # Prefer MONGO_URI from environment (for Docker), fallback to config
+    mongo_uri = os.environ.get("MONGO_URI") or mongo_config.get("uri", "mongodb://localhost:27017")
+
     db = get_mongo_db(
-        uri=mongo_config.get("uri", "mongodb://localhost:27017"),
+        uri=mongo_uri,
         db_name=mongo_config.get("db", "game")
     )
 
