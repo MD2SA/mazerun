@@ -1,3 +1,4 @@
+USE mazerun;
 DELIMITER //
 
 DROP PROCEDURE IF EXISTS sp_insert_measure //
@@ -10,7 +11,7 @@ BEGIN
     IF p_mongo_id IS NOT NULL AND EXISTS (SELECT 1 FROM processed_event WHERE mongo_id = p_mongo_id) THEN
         BEGIN END;
     ELSE
-        INSERT INTO measures (time, originRoom, destinyRoom, Marsami, Status, simulation_id)
+        INSERT INTO measure (time, originRoom, destinyRoom, Marsami, Status, simulation_id)
         VALUES (p_time, p_originRoom, p_destinyRoom, p_marsami, p_status, p_simulation_id);
         
         IF p_mongo_id IS NOT NULL THEN
@@ -30,7 +31,7 @@ BEGIN
     IF p_mongo_id IS NOT NULL AND EXISTS (SELECT 1 FROM processed_event WHERE mongo_id = p_mongo_id) THEN
         BEGIN END;
     ELSE
-        INSERT INTO invalid_move (time, originRoom, destinyRoom, Marsami, Status, reason, simulation_id)
+        INSERT INTO invalid_measure (time, originRoom, destinyRoom, marsami, status, reason, simulation_id)
         VALUES (p_time, p_originRoom, p_destinyRoom, p_marsami, p_status, p_reason, p_simulation_id);
         
         IF p_mongo_id IS NOT NULL THEN
@@ -88,7 +89,7 @@ BEGIN
     IF p_mongo_id IS NOT NULL AND EXISTS (SELECT 1 FROM processed_event WHERE mongo_id = p_mongo_id) THEN
         BEGIN END;
     ELSE
-        INSERT INTO outlier (time, sensor, value, reason, simulation_id) 
+        INSERT INTO sound_outlier (time, sensor, value, reason, simulation_id) 
         VALUES (p_time, p_sensor, p_value, p_reason, p_simulation_id);
         
         IF p_mongo_id IS NOT NULL THEN

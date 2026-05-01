@@ -25,7 +25,9 @@ class SimulationManager:
 
     def _create_simulation(self, dt):
         if not self.db_manager.is_connected():
-            self.db_manager.connect()
+            if not self.db_manager.connect():
+                print("[Core ERROR] Cannot create simulation: Database not connected")
+                return
         
         try:
             cursor = self.db_manager.db.cursor()
