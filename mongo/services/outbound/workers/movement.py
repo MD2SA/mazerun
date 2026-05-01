@@ -1,5 +1,5 @@
 import json
-from .base_handler import BaseWorker
+from .base import BaseWorker
 
 class MovementWorker(BaseWorker):
     def __init__(self, queue, db, mqtt_client, mysql_manager):

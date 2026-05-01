@@ -63,6 +63,7 @@ CREATE TABLE `simulation` (
   `id` int NOT NULL AUTO_INCREMENT,
   `description` text NOT NULL,
   `team` int NOT NULL,
+  `user_email` varchar(255) DEFAULT NULL,
   `startDate` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `fk_simulation_user` (`user_email`),
