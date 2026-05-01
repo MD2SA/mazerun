@@ -7,16 +7,18 @@ class MySQLConnection:
         self.db = None
 
     def connect(self):
+        import os
+        host = os.environ.get("MYSQL_HOST") or self.config.get("host", "localhost")
         try:
             self.db = mysql.connector.connect(
-                host=self.config.get("host", "localhost"),
+                host=host,
                 port=self.config.get("port", 3306),
                 user=self.config.get("user", "root"),
                 password=self.config.get("password", "root"),
                 database=self.config.get("db", "mazerun"),
                 auth_plugin="mysql_native_password"
             )
-            print(f"[DB] MySQL Connected to {self.config.get('db')}")
+            print(f"[DB] MySQL Connected to {self.config.get('db')} (via {host})")
             return True
         except Error as e:
             print(f"[DB ERROR] {e}")

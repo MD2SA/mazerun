@@ -9,15 +9,15 @@ from common.config_loader import load_config
 from common.mongo_connection import get_mongo_db
 from common.mysql_connection import MySQLManager
 
-from change_stream import MongoChangeStreamDispatcher
+from services.outbound.change_stream import MongoChangeStreamDispatcher
 
 # Import All Workers
-from workers.movement import MovementWorker
-from workers.temperature import TemperatureWorker
-from workers.sound import SoundWorker
-from workers.room import RoomWorker
-from workers.retry import RetryWorker
-from workers.ack import AckWorker
+from services.outbound.workers.movement import MovementWorker
+from services.outbound.workers.temperature import TemperatureWorker
+from services.outbound.workers.sound import SoundWorker
+from services.outbound.workers.room import RoomWorker
+from services.outbound.workers.retry import RetryWorker
+from services.outbound.workers.ack import AckWorker
 
 def main():
     print("=== STARTING OUTBOUND SERVICE (Sync MongoDB -> MySQL + ACKs) ===")
@@ -28,9 +28,12 @@ def main():
     mysql_config = config.get("mysql", {})
     consulting_config = mysql_config.get("consulting", {})
 
+    # Prefer MONGO_URI from environment (for Docker), fallback to config
+    mongo_uri = os.environ.get("MONGO_URI") or mongo_config.get("uri", "mongodb://localhost:27017")
+
     # 1. Database Connections
     db = get_mongo_db(
-        uri=mongo_config.get("uri", "mongodb://localhost:27017"),
+        uri=mongo_uri,
         db_name=mongo_config.get("db", "game")
     )
 
@@ -55,7 +58,7 @@ def main():
 
     # 3. Change Stream Dispatcher
     dispatcher = MongoChangeStreamDispatcher(
-        mongo_uri=mongo_config.get("uri", "mongodb://localhost:27017"),
+        mongo_uri=mongo_uri,
         db_name=mongo_config.get("db", "game")
     )
 

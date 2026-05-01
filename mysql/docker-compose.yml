@@ -1,0 +1,36 @@
+services:
+  mysql-db:
+    image: mysql:8.0
+    container_name: mazerun-mysql-db
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./db:/docker-entrypoint-initdb.d
+    # restart: always
+
+  mysql-app:
+    build: ./persistence
+    container_name: mazerun-mysql-persistence
+    depends_on:
+      - mysql-db
+    volumes:
+      - ./persistence/config.yaml:/app/config.yaml
+    environment:
+      - MYSQL_HOST=mysql-db
+    # restart: always
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: mazerun-phpmyadmin
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: mysql-db
+    depends_on:
+      - mysql-db
+
+volumes:
+  mysql_data:
