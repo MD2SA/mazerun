@@ -25,10 +25,12 @@ class TemperatureWorker(BaseWorker):
         except ValueError:
             self._publish_error("processed/invalid", doc, "Invalid temperature format")
             return
-            
+
         timestamp = doc.get("Hour") or doc.get("timestamp")
-        
+
         doc_out = {
+            "mongo_id": str(doc["_id"]),
+            "collection": "temperature",
             "player": player,
             "game": doc.get("game", 1),
             "temperature": temp,
@@ -38,12 +40,14 @@ class TemperatureWorker(BaseWorker):
         # Check threshold
         if temp >= self.threshold:
             current_time = pd.to_datetime(timestamp)
-            
+
             # Anti-spam window
             last_alert = self.last_alert_time.get(player)
             if not last_alert or (current_time - last_alert).total_seconds() > self.delta_t_seconds:
                 # Generate Alert - Match persistence/main.py topic: processed/message
                 self.mqtt_client.client.publish("processed/message", json.dumps({
+                    "mongo_id": doc_out["mongo_id"],
+                    "collection": doc_out["collection"],
                     "player": player,
                     "game": doc.get("game", 1),
                     "value": temp,
