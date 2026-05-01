@@ -1,0 +1,17 @@
+mqtt:
+  broker: "broker.hivemq.com"
+  port: 1883
+
+mysql:
+  consulting:
+    host: "194.210.86.10"
+    port: 3306
+    user: "aluno"
+    password: "aluno"
+    db: "maze"
+  saving:
+    host: "localhost"
+    port: 3306
+    user: "root"
+    password: "root"
+    db: "mazerun"

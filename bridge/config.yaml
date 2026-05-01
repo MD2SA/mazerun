@@ -19,9 +19,3 @@ mysql:
     user: "aluno"
     password: "aluno"
     db: "maze"
-  saving:
-    host: "localhost"
-    port: 3306
-    user: "root"
-    password: "root"
-    db: "mazerun"

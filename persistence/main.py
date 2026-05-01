@@ -9,7 +9,7 @@ from mysql.connector import Error
 from dateutil import parser as dateutil_parser
 
 # Load YAML config
-with open("../bridge/config.yaml") as f:
+with open("config.yaml") as f:
     config = yaml.safe_load(f)
 
 mqtt_config = config.get("mqtt", {})
