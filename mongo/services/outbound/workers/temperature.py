@@ -1,24 +1,20 @@
 import json
 import pandas as pd
-from datetime import timedelta
-from .base_handler import BaseWorker
-import constants
+from .base import BaseWorker
+from common import constants
 
 class TemperatureWorker(BaseWorker):
     def __init__(self, queue, db, mqtt_client):
         super().__init__(queue, db, mqtt_client, "temperature")
         self.threshold = constants.TEMP_THRESHOLD
         self.delta_t_seconds = constants.TEMP_ANTI_SPAM_SECONDS
-        # Keep track of last alert time per player
         self.last_alert_time = {}
 
     def process(self, doc):
-        # Raw fields: Player, Temperature, Hour
         if "Temperature" not in doc or "Player" not in doc:
             self._publish_error("processed/invalid", doc, "Missing Temperature or Player")
             return
 
-        # Validate type
         try:
             temp = float(doc["Temperature"])
             player = int(doc["Player"])
@@ -37,14 +33,10 @@ class TemperatureWorker(BaseWorker):
             "timestamp": timestamp.isoformat() if hasattr(timestamp, "isoformat") else str(timestamp)
         }
 
-        # Check threshold
         if temp >= self.threshold:
             current_time = pd.to_datetime(timestamp)
-
-            # Anti-spam window
             last_alert = self.last_alert_time.get(player)
             if not last_alert or (current_time - last_alert).total_seconds() > self.delta_t_seconds:
-                # Generate Alert - Match persistence/main.py topic: processed/message
                 self.mqtt_client.client.publish("processed/message", json.dumps({
                     "mongo_id": doc_out["mongo_id"],
                     "collection": doc_out["collection"],
@@ -56,7 +48,6 @@ class TemperatureWorker(BaseWorker):
                 }))
                 self.last_alert_time[player] = current_time
 
-        # Always publish valid temperature - Match persistence/main.py topic: processed/temperature
         self.mqtt_client.client.publish("processed/temperature", json.dumps(doc_out))
 
     def _publish_error(self, topic, doc, reason):

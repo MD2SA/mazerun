@@ -1,83 +1,41 @@
-import yaml
-import threading
+import multiprocessing
+import sys
+import os
 
-from core.mqtt_client import MQTTClient
-from managers.mongo_manager import MongoManager
-from managers.mysql_manager import MySQLManager
-from managers.mongo_change_streams import MongoChangeStreamDispatcher
+# Ensure the root mongo directory is in the path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from handlers.movement_handler import MovementWorker
-from handlers.temperature_handler import TemperatureWorker
-from handlers.sound_handler import SoundWorker
-from handlers.room_handler import RoomWorker
-from handlers.retry_worker import RetryWorker
+# Import the entry points from each service
+from services.inbound.app import main as run_inbound
+from services.outbound.app import main as run_outbound
 
-# Load YAML config
-with open("config.yaml") as f:
-    config = yaml.safe_load(f)
+def main():
+    print("==========================================")
+    print("   MAZERUN MONGO MULTI-PROCESS ORCHESTRATOR")
+    print("==========================================")
 
-mqtt_config = config.get("mqtt", {})
-mongo_config = config.get("mongo", {})
-mysql_config = config.get("mysql", {})
+    # Define the processes
+    # We call the main() functions of each service directly in a new process
+    p1 = multiprocessing.Process(target=run_inbound, name="InboundService")
+    p2 = multiprocessing.Process(target=run_outbound, name="OutboundService")
 
-mongo_manager = MongoManager(
-    uri=mongo_config.get("uri", "mongodb://localhost:27017"),
-    db_name=mongo_config.get("db", "game"),
-)
+    # Start both processes
+    p1.start()
+    p2.start()
 
-mysql_config = config.get("mysql", {})
-consulting_config = mysql_config.get("consulting", {})
+    print(f"[Orchestrator] Services started. Inbound (PID: {p1.pid}), Outbound (PID: {p2.pid})")
 
-mysql_manager = MySQLManager(
-    host=consulting_config.get("host", "localhost"),
-    port=consulting_config.get("port", 3306),
-    user=consulting_config.get("user", "aluno"),
-    password=consulting_config.get("password", "aluno"),
-    database=consulting_config.get("db", "mazerun")
-)
+    try:
+        # Keep the main process alive while children are running
+        p1.join()
+        p2.join()
+    except KeyboardInterrupt:
+        print("\n[Orchestrator] KeyboardInterrupt detected, shutting down services...")
+        p1.terminate()
+        p2.terminate()
+        p1.join()
+        p2.join()
+        print("[Orchestrator] Shutdown complete.")
 
-# Connect to MySQL
-mysql_manager.connect()
-
-# Start MQTT client
-topics = mqtt_config.get("topics", [])
-if "persistence/ack" not in topics:
-    topics.append("persistence/ack")
-
-mqtt = MQTTClient(
-    broker=mqtt_config.get("broker"),
-    port=mqtt_config.get("port"),
-    topics=topics,
-    manager=mongo_manager,
-)
-
-# Dispatch Change Streamer
-dispatcher = MongoChangeStreamDispatcher(
-    mongo_uri=mongo_config.get("uri", "mongodb://localhost:27017"),
-    db_name=mongo_config.get("db", "game")
-)
-
-# Start 4 Independent Thread Workers
-movement_worker = MovementWorker(dispatcher.queues["moves"], dispatcher.db, mqtt, mysql_manager)
-temperature_worker = TemperatureWorker(dispatcher.queues["temperature"], dispatcher.db, mqtt)
-sound_worker = SoundWorker(dispatcher.queues["sound"], dispatcher.db, mqtt)
-room_worker = RoomWorker(dispatcher.queues["rooms"], dispatcher.db, mqtt)
-
-movement_worker.start()
-temperature_worker.start()
-sound_worker.start()
-room_worker.start()
-
-# Start Retry Worker (timeout 30 seconds)
-retry_worker = RetryWorker(dispatcher.db, timeout_seconds=30)
-retry_worker.start()
-
-# Start MQTT Client in a daemon thread so it doesn't block
-threading.Thread(target=mqtt.start, daemon=True).start()
-
-# Start listening to change stream (blocks main thread)
-try:
-    dispatcher.start_listening()
-except KeyboardInterrupt:
-    print("Shutting down gracefully...")
-    mysql_manager.close()
+if __name__ == "__main__":
+    main()

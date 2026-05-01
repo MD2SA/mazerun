@@ -1,5 +1,5 @@
 import json
-from .base_handler import BaseWorker
+from .base import BaseWorker
 
 class RoomWorker(BaseWorker):
     def __init__(self, queue, db, mqtt_client):
@@ -9,12 +9,11 @@ class RoomWorker(BaseWorker):
         room_id = doc.get("_id")
 
         # Room doc processing: query odd/even marsamis in this room
-        # In the raw moves collection, destiny is "RoomDestiny" and marsami is "Marsami"
         pipeline = [
             {"$match": {"RoomDestiny": room_id}},
             {"$group": {
                 "_id": {"marsami": "$Marsami"},
-                "count": {"$sum": 1} # Total times marsami went to room
+                "count": {"$sum": 1}
             }}
         ]
 
@@ -51,8 +50,7 @@ class RoomWorker(BaseWorker):
             }
             # Actuator topic
             self.mqtt_client.client.publish("actuator/score", json.dumps(action_payload))
-            # Match persistence/main.py topic: processed/message (for actions)
-            # Actually, persistence has handle_message for processed/message
+            
             action_copy = action_payload.copy()
             action_copy["mongo_id"] = doc_out["mongo_id"]
             action_copy["collection"] = doc_out["collection"]
@@ -62,9 +60,3 @@ class RoomWorker(BaseWorker):
 
         # Match persistence/main.py topic: processed/ocupation
         self.mqtt_client.client.publish("processed/ocupation", json.dumps(doc_out))
-
-    def _publish(self, topic, raw_doc, payload):
-        if raw_doc and "_id" in raw_doc:
-            payload["mongo_id"] = str(raw_doc["_id"])
-            payload["collection"] = "rooms"
-        self.mqtt_client.client.publish(topic, json.dumps(payload))

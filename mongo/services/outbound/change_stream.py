@@ -46,7 +46,6 @@ class MongoChangeStreamDispatcher:
                     }}
                 ]
                 
-                # We need full_document to always be present
                 with self.db.watch(pipeline=pipeline, full_document="updateLookup", resume_after=resume_token) as stream:
                     print("[ChangeStream] Listening for new pending documents...")
 
@@ -60,21 +59,17 @@ class MongoChangeStreamDispatcher:
                         # Dispatch to correct queue
                         if coll in self.queues:
                             self.queues[coll].put((change["_id"], doc))
-                        else:
-                            pass # Unsupported collection
-
                         
                         resume_token = change["_id"]
                         save_resume_token(resume_token)
 
             except PyMongoError as e:
-                err_code = e._OperationFailure__code if hasattr(e, '_OperationFailure__code') else getattr(e, 'code', 0)
-                if err_code == 40573 or "replica set" in str(e).lower():
-                    print("[ChangeStream] Replica Set not enabled. Falling back to Polling.")
+                print(f"[ChangeStream] Mongo error: {e}")
+                if "replica set" in str(e).lower():
+                    print("[ChangeStream] Falling back to Polling.")
                     self._fallback_polling()
-                else:
-                    print(f"[ChangeStream] Mongo error, reconnecting: {e}")
-                    time.sleep(5)
+                    break
+                time.sleep(5)
             except Exception as e:
                 print(f"[ChangeStream] Unexpected error: {e}")
                 time.sleep(5)
@@ -86,6 +81,7 @@ class MongoChangeStreamDispatcher:
                 for coll in self.queues.keys():
                     cursor = self.db[coll].find({"process_status": "pending"})
                     for doc in cursor:
+                        # Simple check to avoid duplicates in queue if still pending
                         self.queues[coll].put((doc["_id"], doc))
                 time.sleep(1) # Poll every 1 second
             except Exception as e:
