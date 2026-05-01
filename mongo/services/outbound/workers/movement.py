@@ -1,10 +1,12 @@
 import json
 from .base import BaseWorker
+from services.outbound.actuators import ActuatorService
 
 class MovementWorker(BaseWorker):
     def __init__(self, queue, db, mqtt_client, mysql_manager):
         super().__init__(queue, db, mqtt_client, "moves")
         self.mysql_manager = mysql_manager
+        self.actuator = ActuatorService(mqtt_client)
 
     def process(self, doc):
         # Raw fields: Player, RoomOrigin, RoomDestiny, Marsami
@@ -49,9 +51,40 @@ class MovementWorker(BaseWorker):
         if is_valid:
             # Match persistence/main.py expected topic: processed/measure
             self.mqtt_client.client.publish("processed/measure", json.dumps(doc_out))
+            
+            # --- Actuator Logic ---
+            self._check_marsami_parity(destiny, player)
+            # ----------------------
         else:
             doc_out["error"] = "Invalid room transition"
             self.mqtt_client.client.publish("processed/invalid_measure", json.dumps(doc_out))
+
+    def _check_marsami_parity(self, room_id, current_player):
+        """
+        Checks if the number of even and odd marsamis in a room is equal.
+        """
+        # Find latest position of each player
+        pipeline = [
+            {"$sort": {"timestamp": -1}},
+            {"$group": {
+                "_id": "$Player",
+                "last_room": {"$first": "$RoomDestiny"},
+                "marsami": {"$first": "$Marsami"}
+            }},
+            {"$match": {"last_room": room_id}}
+        ]
+        
+        players_in_room = list(self.db["moves"].aggregate(pipeline))
+        
+        if not players_in_room:
+            return
+
+        evens = [p for p in players_in_room if p["marsami"] % 2 == 0]
+        odds = [p for p in players_in_room if p["marsami"] % 2 != 0]
+
+        if len(evens) == len(odds) and len(evens) > 0:
+            print(f"[Actuator] Parity detected in room {room_id}: {len(evens)} evens, {len(odds)} odds.")
+            self.actuator.send_score(current_player, room_id)
 
     def _publish_invalid(self, doc, reason):
         payload = {
