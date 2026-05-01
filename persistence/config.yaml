@@ -1,0 +1,17 @@
+mqtt:
+  broker: "broker.hivemq.com"
+  port: 1883
+
+mysql:
+  consulting:
+    host: "consulting-db.example.edu"
+    port: 3306
+    user: "REDACTED"
+    password: "REDACTED"
+    db: "maze"
+  saving:
+    host: "localhost"
+    port: 3306
+    user: "root"
+    password: "REDACTED"
+    db: "mazerun"

@@ -26,7 +26,6 @@ mongo_manager = MongoManager(
 
 mysql_config = config.get("mysql", {})
 consulting_config = mysql_config.get("consulting", {})
-saving_config = mysql_config.get("saving", {})
 
 mysql_manager = MySQLManager(
     host=consulting_config.get("host", "localhost"),
