@@ -88,3 +88,31 @@ class MongoManager:
                 {"_id": origin, "marsami_count": {"$lt": 0}},
                 {"$set": {"marsami_count": 0}}
             )
+    def mark_as_processed(self, mongo_id, collection_name=None):
+        from bson import ObjectId
+        
+        try:
+            oid = ObjectId(mongo_id)
+        except:
+            oid = mongo_id
+
+        # If collection is known, update directly
+        if collection_name:
+            self.db[collection_name].update_one(
+                {"_id": oid},
+                {"$set": {"process_status": "processed", "processed_at": datetime.now(timezone.utc)}}
+            )
+            print(f"[DB] Document {mongo_id} in {collection_name} marked as PROCESSED")
+            return True
+
+        # Fallback: search all collections
+        collections = ["moves", "temperature", "sound", "actions", "rooms"]
+        for coll in collections:
+            result = self.db[coll].update_one(
+                {"_id": oid},
+                {"$set": {"process_status": "processed", "processed_at": datetime.now(timezone.utc)}}
+            )
+            if result.modified_count > 0:
+                print(f"[DB] Document {mongo_id} in {coll} marked as PROCESSED (searched)")
+                return True
+        return False

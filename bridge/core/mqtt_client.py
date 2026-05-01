@@ -25,8 +25,9 @@ class MQTTClient:
             print("[MQTT] Connected")
 
             for topic in self.topics:
-                client.subscribe(topic)
-                print("[MQTT] Subscribed to", topic)
+                qos = 1 if "mazemov" in topic or "mazetemp" in topic else 0
+                client.subscribe(topic, qos=qos)
+                print(f"[MQTT] Subscribed to {topic} with QoS {qos}")
 
     def on_message(self, client, userdata, msg):
 
@@ -38,7 +39,13 @@ class MQTTClient:
             # debug statement
             print("[MQTT] Received:", topic, payload)
 
-            self.manager.process_message(topic, payload)
+            if topic == "persistence/ack":
+                mongo_id = payload.get("mongo_id")
+                collection = payload.get("collection")
+                if mongo_id:
+                    self.manager.mark_as_processed(mongo_id, collection)
+            else:
+                self.manager.process_message(topic, payload)
 
         except Exception as e:
 
