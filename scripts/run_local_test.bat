@@ -1,6 +1,19 @@
 @echo off
 echo === STARTING FULL LOCAL TEST (MONGO + MYSQL) ===
 
+set /p reset_db="Do you want to RESET the databases? (This will DELETE ALL DATA and re-run SQL scripts) [y/N]: "
+
+if /i "%reset_db%"=="y" (
+    echo [Clean] Stopping services and removing volumes...
+    cd mongo
+    docker-compose down -v
+    cd ..
+    cd mysql
+    docker-compose down -v
+    cd ..
+    echo [Clean] Reset complete.
+)
+
 :: 1. Start Mongo services
 echo [1/2] Starting MONGO services...
 cd mongo

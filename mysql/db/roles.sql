@@ -1,3 +1,4 @@
+USE mazerun;
 -- 1. Creates the users
 CREATE USER IF NOT EXISTS 'adm_user'@'%' IDENTIFIED BY 'REDACTED';
 CREATE USER IF NOT EXISTS 'migrator_user'@'%' IDENTIFIED BY 'REDACTED';
