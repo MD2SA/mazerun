@@ -2,6 +2,7 @@ import json
 import pandas as pd
 from .base import BaseWorker
 from common import constants
+from services.outbound.actuators import ActuatorService
 
 class TemperatureWorker(BaseWorker):
     def __init__(self, queue, db, mqtt_client):
@@ -9,6 +10,7 @@ class TemperatureWorker(BaseWorker):
         self.threshold = constants.TEMP_THRESHOLD
         self.delta_t_seconds = constants.TEMP_ANTI_SPAM_SECONDS
         self.last_alert_time = {}
+        self.actuator = ActuatorService(mqtt_client)
 
     def process(self, doc):
         if "Temperature" not in doc or "Player" not in doc:
@@ -47,6 +49,13 @@ class TemperatureWorker(BaseWorker):
                     "timestamp": doc_out["timestamp"]
                 }))
                 self.last_alert_time[player] = current_time
+
+        # --- Actuator Logic ---
+        if temp >= constants.ACTUATOR_TEMP_HIGH:
+            self.actuator.open_all_doors(player)
+        elif temp <= constants.ACTUATOR_TEMP_LOW:
+            self.actuator.close_all_doors(player)
+        # ----------------------
 
         self.mqtt_client.client.publish("processed/temperature", json.dumps(doc_out))
 

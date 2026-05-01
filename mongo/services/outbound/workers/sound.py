@@ -3,11 +3,13 @@ import pandas as pd
 from datetime import timedelta
 from .base import BaseWorker
 from common import constants
+from services.outbound.actuators import ActuatorService
 
 class SoundWorker(BaseWorker):
     def __init__(self, queue, db, mqtt_client):
         super().__init__(queue, db, mqtt_client, "sound")
         self.player_state = {}
+        self.actuator = ActuatorService(mqtt_client)
 
     def process(self, doc):
         if "Sound" not in doc or "Player" not in doc:
@@ -71,6 +73,11 @@ class SoundWorker(BaseWorker):
             self._publish("processed/sound_outlier", None, doc_out)
         else:
             self._publish("processed/sound", None, doc_out)
+
+        # --- Actuator Logic ---
+        if sound >= constants.ACTUATOR_SOUND_HIGH:
+            self.actuator.close_all_doors(player)
+        # ----------------------
 
     def _publish(self, topic, raw_doc, payload):
         if raw_doc and "_id" in raw_doc:
