@@ -1,0 +1,4 @@
+pyyaml
+paho-mqtt
+mysql-connector-python
+python-dateutil
