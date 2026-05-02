@@ -29,6 +29,16 @@ class ActuatorService:
         payload = {"Type": "OpenAllDoor", "Player": player}
         self._publish(payload)
 
+    def ac_on(self, player):
+        """Turn AC ON for the given player"""
+        payload = {"Type": "AcOn", "Player": player}
+        self._publish(payload)
+
+    def ac_off(self, player):
+        """Turn AC OFF for the given player"""
+        payload = {"Type": "AcOff", "Player": player}
+        self._publish(payload)
+
     def _publish(self, payload):
         print(f"[Actuator] Publishing to {self.topic}: {payload}")
         self.mqtt_client.client.publish(self.topic, json.dumps(payload))

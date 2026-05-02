@@ -70,17 +70,27 @@ class ActionHandler(BaseHandler):
         action_type = payload.get("Type", "Unknown")
         player = payload.get("Player", "Unknown")
         
-        # Determine target based on action type
-        target = player
-        if "Room" in payload:
-            target = f"{player} (Room {payload['Room']})"
-        elif "RoomOrigin" in payload and "RoomDestiny" in payload:
-            target = f"{player} ({payload['RoomOrigin']}->{payload['RoomDestiny']})"
-        
-        # Determine value (e.g., 1 for success/trigger)
+        # Default values
+        target = f"Player {player}"
         value = 1
         
+        # Custom logic for different types
+        if action_type == "Score":
+            target = f"Room {payload.get('Room', '??')}"
+            value = 1
+        elif action_type in ["OpenDoor", "CloseDoor"]:
+            origin = payload.get("RoomOrigin", "?")
+            destiny = payload.get("RoomDestiny", "?")
+            target = f"{origin} -> {destiny}"
+        elif action_type == "SetAC":
+            state = payload.get("State", 0)
+            target = "Air Conditioner"
+            value = state # 1 for ON, 0 for OFF
+        elif action_type in ["CloseAllDoor", "OpenAllDoor"]:
+            target = "All Corridors"
+            value = 1 if "Open" in action_type else 0
+
+        # Insert into MySQL 'action' table
         self.db_manager.call_sp("sp_insert_action", (
             dt, action_type, target, value, sim_id
         ))
-        # Note: No ACK sent here as this is a passive listener for outbound actions
