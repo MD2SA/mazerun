@@ -31,6 +31,7 @@ class TemperatureWorker(BaseWorker):
             "collection": "temperature",
             "player": player,
             "game": doc.get("game", 1),
+            "simulation_id": doc.get("simulation_id"),
             "temperature": temp,
             "timestamp": timestamp.isoformat() if hasattr(timestamp, "isoformat") else str(timestamp)
         }

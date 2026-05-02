@@ -146,11 +146,11 @@ END //
 
 DROP PROCEDURE IF EXISTS sp_insert_simulation //
 CREATE PROCEDURE sp_insert_simulation(
-    IN p_sim_id INT, IN p_team INT, IN p_start_date TIMESTAMP
+    IN p_sim_id INT, IN p_team INT, IN p_start_date TIMESTAMP, IN p_player_id INT
 )
 BEGIN
-    INSERT IGNORE INTO simulation (id, description, team, startDate, user_email)
-    VALUES (p_sim_id, CONCAT('Simulation ', p_sim_id), p_team, p_start_date, 'aluno@iscte-iul.pt');
+    INSERT IGNORE INTO simulation (id, description, team, startDate, user_email, player_id)
+    VALUES (p_sim_id, CONCAT('Simulation ', p_sim_id), p_team, p_start_date, 'aluno@iscte-iul.pt', p_player_id);
 END //
 
 DROP PROCEDURE IF EXISTS sp_insert_action //

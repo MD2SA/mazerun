@@ -65,6 +65,7 @@ CREATE TABLE `simulation` (
   `team` int NOT NULL,
   `user_email` varchar(255) DEFAULT NULL,
   `startDate` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `player_id` int DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `fk_simulation_user` (`user_email`),
   CONSTRAINT `fk_simulation_user` FOREIGN KEY (`user_email`) REFERENCES `user` (`email`) ON DELETE CASCADE
