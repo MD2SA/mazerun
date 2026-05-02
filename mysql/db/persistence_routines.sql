@@ -153,4 +153,15 @@ BEGIN
     VALUES (p_sim_id, CONCAT('Simulation ', p_sim_id), p_team, p_start_date, 'aluno@iscte-iul.pt');
 END //
 
+DROP PROCEDURE IF EXISTS sp_insert_action //
+CREATE PROCEDURE sp_insert_action(
+    IN p_time TIMESTAMP, IN p_action_type VARCHAR(50), IN p_target VARCHAR(50), 
+    IN p_value INT, IN p_simulation_id INT
+)
+BEGIN
+    INSERT INTO action (time, action_type, target, value, simulation_id)
+    VALUES (p_time, p_action_type, p_target, p_value, p_simulation_id);
+    SELECT 1;
+END //
+
 DELIMITER ;
