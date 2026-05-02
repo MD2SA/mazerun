@@ -64,6 +64,7 @@ class SoundWorker(BaseWorker):
             "collection": "sound",
             "player": player,
             "game": doc.get("game", 1),
+            "simulation_id": doc.get("simulation_id"),
             "sound": sound,
             "movements_window": movements,
             "timestamp": timestamp.isoformat()
