@@ -64,3 +64,33 @@ class OccupationHandler(BaseHandler):
             sim_id, payload.get("mongo_id")
         ))
         if res == 1: self.send_ack(client, payload)
+
+class ActionHandler(BaseHandler):
+    def handle(self, client, payload, dt, sim_id):
+        action_type = payload.get("Type", "Unknown")
+        player = payload.get("Player", "Unknown")
+        
+        # Default values
+        target = f"Player {player}"
+        value = 1
+        
+        # Custom logic for different types
+        if action_type == "Score":
+            target = f"Room {payload.get('Room', '??')}"
+            value = 1
+        elif action_type in ["OpenDoor", "CloseDoor"]:
+            origin = payload.get("RoomOrigin", "?")
+            destiny = payload.get("RoomDestiny", "?")
+            target = f"{origin} -> {destiny}"
+        elif action_type == "SetAC":
+            state = payload.get("State", 0)
+            target = "Air Conditioner"
+            value = state # 1 for ON, 0 for OFF
+        elif action_type in ["CloseAllDoor", "OpenAllDoor"]:
+            target = "All Corridors"
+            value = 1 if "Open" in action_type else 0
+
+        # Insert into MySQL 'action' table
+        self.db_manager.call_sp("sp_insert_action", (
+            dt, action_type, target, value, sim_id
+        ))
