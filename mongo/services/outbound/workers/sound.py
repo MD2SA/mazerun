@@ -40,6 +40,7 @@ class SoundWorker(BaseWorker):
         is_outlier = False
         outlier_reason = ""
 
+        # Outlier Detection Rules
         if movements > 0:
             ratio = sound / movements
             if ratio > constants.SOUND_RATIO_MAX or ratio < constants.SOUND_RATIO_MIN:
