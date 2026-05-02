@@ -9,7 +9,8 @@ from common.mysql_connection import MySQLConnection
 from core.simulation_manager import SimulationManager
 from handlers.data_handlers import (
     MeasureHandler, InvalidMeasureHandler, TemperatureHandler,
-    SoundHandler, SoundOutlierHandler, MessageHandler, OccupationHandler
+    SoundHandler, SoundOutlierHandler, MessageHandler, OccupationHandler,
+    ActionHandler
 )
 
 class PersistenceApp:
@@ -30,6 +31,7 @@ class PersistenceApp:
             "processed/sound_outlier": SoundOutlierHandler(self.db_manager),
             "processed/message": MessageHandler(self.db_manager),
             "processed/ocupation": OccupationHandler(self.db_manager),
+            "pisid_mazeact": ActionHandler(self.db_manager),
         }
 
     def on_message(self, client, userdata, msg):

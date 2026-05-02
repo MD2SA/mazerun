@@ -64,3 +64,23 @@ class OccupationHandler(BaseHandler):
             sim_id, payload.get("mongo_id")
         ))
         if res == 1: self.send_ack(client, payload)
+
+class ActionHandler(BaseHandler):
+    def handle(self, client, payload, dt, sim_id):
+        action_type = payload.get("Type", "Unknown")
+        player = payload.get("Player", "Unknown")
+        
+        # Determine target based on action type
+        target = player
+        if "Room" in payload:
+            target = f"{player} (Room {payload['Room']})"
+        elif "RoomOrigin" in payload and "RoomDestiny" in payload:
+            target = f"{player} ({payload['RoomOrigin']}->{payload['RoomDestiny']})"
+        
+        # Determine value (e.g., 1 for success/trigger)
+        value = 1
+        
+        self.db_manager.call_sp("sp_insert_action", (
+            dt, action_type, target, value, sim_id
+        ))
+        # Note: No ACK sent here as this is a passive listener for outbound actions
