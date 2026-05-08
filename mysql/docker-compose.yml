@@ -42,7 +42,7 @@ services:
       - ./php:/var/www/html
       - ../../Maze/scripts:/var/www/html/maze_app_php
     depends_on:
-      - mysql
+      - mysql-db
 
 volumes:
   mysql_data:
