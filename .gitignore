@@ -1,1 +1,9 @@
 game/**
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+*.log
