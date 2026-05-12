@@ -3,6 +3,7 @@
 # Script to start a new MazeRun simulation session
 # Usage: ./start_simulation.sh <player_id>
 
+TEAM_ID=25
 PLAYER_ID=$1
 
 if [ -z "$PLAYER_ID" ]; then
@@ -55,7 +56,7 @@ if [ $? -eq 0 ]; then
     echo "[Launcher] Starting mazerun.exe with arguments..."
     
     EXE_PATH="game/server/mazerun.exe"
-    wine "$EXE_PATH" 25 --flagMessage 1 --delay 2 --broker broker.hivemq.com --portbroker 1883 > /dev/null 2>&1 &
+    wine "$EXE_PATH" $TEAM_ID --flagMessage 1 --delay 2 --broker broker.hivemq.com --portbroker 1883 > /dev/null 2>&1 &
     
     GAME_PID=$!
     echo "[Launcher] Game started (PID: $GAME_PID)"
