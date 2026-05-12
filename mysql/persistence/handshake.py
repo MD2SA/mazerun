@@ -1,7 +1,6 @@
 import sys
 import json
 import time
-import datetime
 import paho.mqtt.client as mqtt
 from common.config_loader import load_config
 from common.mysql_connection import MySQLConnection
@@ -30,13 +29,15 @@ def main():
 
     try:
         cursor = db.db.cursor()
-        dt = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        # Using the updated schema with player_id
-        cursor.execute(
-            "INSERT INTO simulation (description, team, startDate, player_id) VALUES (%s, %s, %s, %s)",
-            ("Handshake Session", 25, dt, player_id)
-        )
-        sim_id = cursor.lastrowid
+        # Using Stored Procedure to create simulation
+        cursor.callproc("sp_create_game", ("Handshake Session", 25, player_id))
+        
+        # Get the result from the SELECT inside the SP
+        for result in cursor.stored_results():
+            row = result.fetchone()
+            if row:
+                sim_id = row[0]
+        
         db.db.commit()
         cursor.close()
         print(f"[Handshake] ✔ Created Simulation ID: {sim_id} for Player: {player_id}")
