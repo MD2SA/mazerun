@@ -1,5 +1,7 @@
 game/**
 
+persistence_session.log
+
 # Python
 __pycache__/
 *.py[cod]
