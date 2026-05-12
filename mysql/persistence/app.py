@@ -6,7 +6,6 @@ from dateutil import parser as dateutil_parser
 
 from common.config_loader import load_config
 from common.mysql_connection import MySQLConnection
-from core.simulation_manager import SimulationManager
 from handlers.data_handlers import (
     MeasureHandler, InvalidMeasureHandler, TemperatureHandler,
     SoundHandler, SoundOutlierHandler, MessageHandler, OccupationHandler,
@@ -26,7 +25,6 @@ class PersistenceApp:
         mysql_config = self.config.get("mysql", {}).get("saving", {})
 
         self.db_manager = MySQLConnection(mysql_config)
-        self.sim_manager = SimulationManager(self.db_manager)
 
         # Initialize handlers
         self.handlers = {
@@ -53,15 +51,11 @@ class PersistenceApp:
                 dt = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
             # 2. Determine Simulation ID
-            # Priority 1: ID from payload (stamped by MongoDB)
-            # Priority 2: Fallback to SimManager (idle-timeout based)
+            # Priority: ID from payload (stamped by MongoDB)
+            # We ignore any message without a simulation_id to avoid stale data.
             sim_id = payload.get("simulation_id")
-            if not sim_id:
-                player_id = payload.get("player")
-                sim_id = self.sim_manager.check_simulation(dt, player_id)
 
             if not sim_id:
-                print("[App] Skipping message: No simulation context found.")
                 return
 
             # 3. Route to Handler
