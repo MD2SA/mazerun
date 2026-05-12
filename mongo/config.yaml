@@ -1,3 +1,4 @@
+team_id: 25
 mqtt:
   broker: "broker.hivemq.com"
   port: 1883
