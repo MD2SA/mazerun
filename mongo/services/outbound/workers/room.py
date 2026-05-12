@@ -6,11 +6,12 @@ class RoomWorker(BaseWorker):
         super().__init__(queue, db, mqtt_client, "rooms")
 
     def process(self, doc):
-        room_id = doc.get("_id")
+        room_id = doc.get("room_id")
+        sim_id = doc.get("simulation_id")
 
-        # Room doc processing: query odd/even marsamis in this room
+        # Room doc processing: query odd/even marsamis in this room for this simulation
         pipeline = [
-            {"$match": {"RoomDestiny": room_id}},
+            {"$match": {"RoomDestiny": room_id, "simulation_id": sim_id}},
             {"$group": {
                 "_id": {"marsami": "$Marsami"},
                 "count": {"$sum": 1}
@@ -35,7 +36,7 @@ class RoomWorker(BaseWorker):
             "collection": "rooms",
             "room": room_id,
             "game": doc.get("game", 1),
-            "simulation_id": doc.get("simulation_id"),
+            "simulation_id": sim_id,
             "odd_marsamis": odd_count,
             "even_marsamis": even_count,
             "timestamp": doc.get("last_update").isoformat() if hasattr(doc.get("last_update"), "isoformat") else str(doc.get("last_update"))
