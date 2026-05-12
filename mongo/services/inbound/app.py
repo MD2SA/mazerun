@@ -26,9 +26,12 @@ def main():
 
     processor = InboundProcessor(db)
     
-    # Filter topics: only those that provide data
+    # Filter topics: only those that provide data + the handshake topic
     all_topics = mqtt_config.get("topics", [])
     data_topics = [t for t in all_topics if any(p in t for p in ["mazemov", "mazetemp", "mazesound", "mazeact"])]
+    # Add the trigger topic explicitly so MongoDB can receive the handshake
+    if "game/start" not in data_topics:
+        data_topics.append("game/start")
 
     mqtt = InboundMQTTClient(
         broker=mqtt_config.get("broker"),
@@ -36,6 +39,9 @@ def main():
         topics=data_topics,
         processor=processor
     )
+    
+    # Inject the MQTT client as the publisher for ACKs
+    processor.mqtt_publisher = mqtt.client
 
     try:
         mqtt.start()

@@ -35,6 +35,7 @@ class RoomWorker(BaseWorker):
             "collection": "rooms",
             "room": room_id,
             "game": doc.get("game", 1),
+            "simulation_id": doc.get("simulation_id"),
             "odd_marsamis": odd_count,
             "even_marsamis": even_count,
             "timestamp": doc.get("last_update").isoformat() if hasattr(doc.get("last_update"), "isoformat") else str(doc.get("last_update"))
