@@ -6,7 +6,8 @@ DELIMITER //
 
 CREATE PROCEDURE sp_create_game(
     IN p_descricao TEXT,
-    IN p_equipa INT
+    IN p_equipa INT,
+    IN p_player_id INT
 )
 BEGIN
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
@@ -16,8 +17,8 @@ BEGIN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = @p_message;
     END;
 
-    INSERT INTO simulation (description, team, startDate)
-    VALUES (p_descricao, p_equipa, NOW());
+    INSERT INTO simulation (description, team, startDate, player_id)
+    VALUES (p_descricao, p_equipa, NOW(), p_player_id);
 
     SELECT LAST_INSERT_ID() AS game_id, 'Game created successfully' AS message;
 END //

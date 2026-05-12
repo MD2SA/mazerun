@@ -1,11 +1,94 @@
+import json
 from datetime import datetime, timezone
 from dateutil import parser as dateutil_parser
 
+
 class InboundProcessor:
-    def __init__(self, db):
+    """Processes inbound MQTT messages:
+    - game/start  → registers active session (player_id + simulation_id) in
+                    MongoDB and publishes game/start/ack to confirm receipt.
+    - sensor data → saves raw document to the appropriate collection, stamped
+                    with the current active session (player_id + simulation_id).
+
+    The active session is stored in the 'active_sessions' collection (one doc
+    per player_id) and in memory for fast access.
+    Old pending documents for the same player are *not* re-tagged; the new
+    session only applies to documents inserted after the game/start event.
+    """
+
+    def __init__(self, db, mqtt_publisher=None):
         self.db = db
+        # mqtt_publisher must expose .publish(topic, payload) for the ACK
+        self.mqtt_publisher = mqtt_publisher
+
+        # In-memory cache: player_id (int) → {"player_id": …, "simulation_id": …}
+        self._active_sessions: dict = {}
+
+        # Restore any previously stored active sessions from MongoDB on startup
+        self._restore_sessions()
+
+    # ------------------------------------------------------------------
+    # Session management
+    # ------------------------------------------------------------------
+
+    def _restore_sessions(self):
+        """Reload active session state from MongoDB on process restart."""
+        try:
+            for doc in self.db["active_sessions"].find():
+                pid = doc.get("player_id")
+                if pid is not None:
+                    self._active_sessions[pid] = {
+                        "player_id": pid,
+                        "simulation_id": doc.get("simulation_id"),
+                    }
+            if self._active_sessions:
+                print(
+                    f"[Inbound] Restored {len(self._active_sessions)} active "
+                    "session(s) from MongoDB."
+                )
+        except Exception as e:
+            print(f"[Inbound ERROR] Restoring sessions: {e}")
+
+    def _register_session(self, player_id, simulation_id):
+        """Store/overwrite the active session for a player in memory and MongoDB."""
+        session = {"player_id": player_id, "simulation_id": simulation_id}
+
+        # Update in-memory cache
+        self._active_sessions[player_id] = session
+
+        # Upsert into MongoDB 'active_sessions' collection
+        try:
+            self.db["active_sessions"].update_one(
+                {"player_id": player_id},
+                {
+                    "$set": {
+                        "simulation_id": simulation_id,
+                        "registered_at": datetime.now(timezone.utc),
+                    }
+                },
+                upsert=True,
+            )
+            print(
+                f"[Inbound] ✔ Active session stored in MongoDB: "
+                f"player_id={player_id} → simulation_id={simulation_id}"
+            )
+        except Exception as e:
+            print(f"[Inbound ERROR] Storing active session in MongoDB: {e}")
+
+    def _get_session_for_player(self, player_id):
+        """Returns the active session dict for a player, or None."""
+        return self._active_sessions.get(player_id)
+
+    # ------------------------------------------------------------------
+    # Main entry point
+    # ------------------------------------------------------------------
 
     def process_message(self, topic, payload):
+        # ── game/start: register session and ACK ──────────────────────────
+        if topic == "game/start":
+            self._handle_game_start(payload)
+            return
+
         # Determine target collection based on topic
         collection_name = None
         if "mazesound" in topic:
@@ -18,30 +101,103 @@ class InboundProcessor:
             collection_name = "actions"
 
         if collection_name:
-            # 1. Raw Historical Record
-            doc = payload.copy() if isinstance(payload, dict) else {"data": payload}
-            doc["process_status"] = "pending"
-            
-            # Standardize timestamp
-            raw_ts = doc.get("Hour") or doc.get("timestamp")
-            if raw_ts:
-                try:
-                    dt = dateutil_parser.parse(str(raw_ts))
-                    doc["timestamp"] = dt.isoformat()
-                except:
-                    doc["timestamp"] = datetime.now(timezone.utc).isoformat()
-            else:
-                doc["timestamp"] = datetime.now(timezone.utc).isoformat()
-                
-            if "Hour" in doc:
-                del doc["Hour"]
-            
-            self.db[collection_name].insert_one(doc)
-            print(f"[Inbound] Saved message to {collection_name}")
+            self._save_sensor_document(collection_name, payload)
 
-            # 2. Stateful Index Update (the rooms logic)
-            if collection_name == "moves":
-                self._update_rooms(payload)
+    # ------------------------------------------------------------------
+    # Handlers
+    # ------------------------------------------------------------------
+
+    def _handle_game_start(self, payload):
+        """Register active session and publish ACK back to MySQL/persistence."""
+        player_id = payload.get("player_id")
+        simulation_id = payload.get("simulation_id")
+
+        if player_id is None or simulation_id is None:
+            print(
+                f"[Inbound ERROR] game/start received with missing fields: {payload}"
+            )
+            return
+
+        print(
+            f"[Inbound] game/start received — player_id={player_id}, "
+            f"simulation_id={simulation_id}"
+        )
+
+        # Store session in MongoDB + in-memory
+        self._register_session(player_id, simulation_id)
+
+        # Publish ACK so that MySQL/persistence can unblock and launch mazerun.exe
+        if self.mqtt_publisher:
+            ack = json.dumps({"player_id": player_id, "simulation_id": simulation_id})
+            try:
+                self.mqtt_publisher.publish("game/start/ack", ack)
+                print(
+                    f"[Inbound] ✔ Published game/start/ack for "
+                    f"player_id={player_id}, simulation_id={simulation_id}"
+                )
+            except Exception as e:
+                print(f"[Inbound ERROR] Publishing game/start/ack: {e}")
+        else:
+            print(
+                "[Inbound WARNING] No mqtt_publisher set — cannot send "
+                "game/start/ack. mazerun.exe will not start."
+            )
+
+    def _save_sensor_document(self, collection_name, payload):
+        """Save a raw sensor document to MongoDB, stamped with active session."""
+        # 1. Build the document
+        doc = payload.copy() if isinstance(payload, dict) else {"data": payload}
+        doc["process_status"] = "pending"
+
+        # Standardise timestamp
+        raw_ts = doc.get("Hour") or doc.get("timestamp")
+        if raw_ts:
+            try:
+                dt = dateutil_parser.parse(str(raw_ts))
+                doc["timestamp"] = dt.isoformat()
+            except Exception:
+                doc["timestamp"] = datetime.now(timezone.utc).isoformat()
+        else:
+            doc["timestamp"] = datetime.now(timezone.utc).isoformat()
+
+        if "Hour" in doc:
+            del doc["Hour"]
+
+        # 2. Stamp with active session (player_id + simulation_id)
+        player_id = doc.get("Player") or doc.get("player_id")
+        if player_id is not None:
+            try:
+                player_id = int(player_id)
+            except (ValueError, TypeError):
+                player_id = None
+
+        session = self._get_session_for_player(player_id) if player_id is not None else None
+
+        if session:
+            doc["player_id"] = session["player_id"]
+            doc["simulation_id"] = session["simulation_id"]
+        else:
+            # No active session for this player — mark so the outbound worker
+            # can decide what to do (skip, queue, etc.)
+            doc["player_id"] = player_id
+            doc["simulation_id"] = None
+            if player_id is not None:
+                print(
+                    f"[Inbound WARNING] No active session for player_id={player_id}. "
+                    "Document saved without simulation_id."
+                )
+
+        # 3. Persist
+        self.db[collection_name].insert_one(doc)
+        print(
+            f"[Inbound] Saved to '{collection_name}' — "
+            f"player_id={doc.get('player_id')}, "
+            f"simulation_id={doc.get('simulation_id')}"
+        )
+
+        # 4. Stateful index update for movement documents
+        if collection_name == "moves":
+            self._update_rooms(payload)
 
     def _update_rooms(self, raw):
         origin = raw.get("RoomOrigin")
@@ -56,10 +212,10 @@ class InboundProcessor:
                     "$addToSet": {"current_marsamis": marsami_id},
                     "$set": {
                         "process_status": "pending",
-                        "last_update": datetime.now(timezone.utc)
-                    }
+                        "last_update": datetime.now(timezone.utc),
+                    },
                 },
-                upsert=True
+                upsert=True,
             )
 
         if origin is not None and origin != 0:
@@ -70,12 +226,12 @@ class InboundProcessor:
                     "$pull": {"current_marsamis": marsami_id},
                     "$set": {
                         "process_status": "pending",
-                        "last_update": datetime.now(timezone.utc)
-                    }
-                }
+                        "last_update": datetime.now(timezone.utc),
+                    },
+                },
             )
-            
+
             self.db["rooms"].update_one(
                 {"_id": origin, "marsami_count": {"$lt": 0}},
-                {"$set": {"marsami_count": 0}}
+                {"$set": {"marsami_count": 0}},
             )

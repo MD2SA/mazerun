@@ -38,6 +38,7 @@ class MovementWorker(BaseWorker):
             "collection": "moves",
             "player": player,
             "game": doc.get("game", 1),
+            "simulation_id": doc.get("simulation_id"),
             "from": origin,
             "to": destiny,
             "marsami": marsami,
