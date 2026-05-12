@@ -144,24 +144,15 @@ class PersistenceService:
 
             print(f"[Persistence] Received {topic}: {payload}")
 
-            now = time.time()
-            is_new_sim = False
+            # 1. Prioritize simulation_id from payload (stamped by MongoDB)
+            # This ensures we respect the Handshake logic.
+            sim_id = payload.get("simulation_id")
 
-            # Create a simulation on the very first message to satisfy foreign key constraints
-            if self.current_sim_id is None:
-                is_new_sim = True
-
-            # If this is a movement, check if the maze was idle for more than 60 seconds
-            elif topic == "processed/measure":
-                if (now - self.last_move_time) > 60:
-                    is_new_sim = True
-                self.last_move_time = now
-
-            if is_new_sim:
-                self.create_new_simulation(dt)
-                self.last_move_time = now
-
-            sim_id = self.current_sim_id
+            # 2. Fallback to current_sim_id (or create one if absolutely necessary)
+            if not sim_id:
+                if self.current_sim_id is None:
+                    self.create_new_simulation(dt)
+                sim_id = self.current_sim_id
 
             if not sim_id:
                 print("[Persistence] Error: Could not acquire simulation ID, skipping message")
@@ -180,23 +171,23 @@ class PersistenceService:
     # --- Handlers for each topic ---
 
     def handle_measure(self, client, payload, dt, sim_id):
-        res = self.call_sp("sp_insert_measure", (dt, payload["from"], payload["to"], payload["marsami"], payload.get("status", 1), sim_id))
+        res = self.call_sp("sp_insert_measure", (dt, payload["from"], payload["to"], payload["marsami"], payload.get("status", 1), sim_id, payload.get("mongo_id")))
         if res == 1: self.send_ack(client, payload)
 
     def handle_invalid_measure(self, client, payload, dt, sim_id):
-        res = self.call_sp("sp_insert_invalid_measure", (dt, payload.get("from", 0), payload.get("to", 0), payload.get("marsami", 0), 0, payload.get("error", "unknown"), sim_id))
+        res = self.call_sp("sp_insert_invalid_measure", (dt, payload.get("from", 0), payload.get("to", 0), payload.get("marsami", 0), 0, payload.get("error", "unknown"), sim_id, payload.get("mongo_id")))
         if res == 1: self.send_ack(client, payload)
 
     def handle_temperature(self, client, payload, dt, sim_id):
-        res = self.call_sp("sp_insert_temperature", (dt, float(payload["temperature"]), sim_id))
+        res = self.call_sp("sp_insert_temperature", (dt, float(payload["temperature"]), sim_id, payload.get("mongo_id")))
         if res == 1: self.send_ack(client, payload)
 
     def handle_sound(self, client, payload, dt, sim_id):
-        res = self.call_sp("sp_insert_sound", (dt, float(payload["sound"]), sim_id))
+        res = self.call_sp("sp_insert_sound", (dt, float(payload["sound"]), sim_id, payload.get("mongo_id")))
         if res == 1: self.send_ack(client, payload)
 
     def handle_sound_outlier(self, client, payload, dt, sim_id):
-        res = self.call_sp("sp_insert_sound_outlier", (dt, "sound", payload.get("sound", 0), payload.get("outlier_reason", ""), sim_id))
+        res = self.call_sp("sp_insert_sound_outlier", (dt, "sound", payload.get("sound", 0), payload.get("outlier_reason", ""), sim_id, payload.get("mongo_id")))
         if res == 1: self.send_ack(client, payload)
 
     def handle_message(self, client, payload, dt, sim_id):
@@ -215,11 +206,11 @@ class PersistenceService:
             alert_type = payload.get("alertType", "HIGH_TEMP")
             alert = payload.get("alert", "")
 
-        res = self.call_sp("sp_insert_message", (dt, sensor, value, alert_type, alert, sim_id))
+        res = self.call_sp("sp_insert_message", (dt, sensor, value, alert_type, alert, sim_id, payload.get("mongo_id")))
         if res == 1: self.send_ack(client, payload)
 
     def handle_ocupation(self, client, payload, dt, sim_id):
-        res = self.call_sp("sp_update_ocupation", (payload.get("room"), payload.get("odd_marsamis", 0), payload.get("even_marsamis", 0), sim_id))
+        res = self.call_sp("sp_update_ocupation", (payload.get("room"), payload.get("odd_marsamis", 0), payload.get("even_marsamis", 0), sim_id, payload.get("mongo_id")))
         if res == 1: self.send_ack(client, payload)
 
 if __name__ == "__main__":
