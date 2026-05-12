@@ -4,6 +4,7 @@ setlocal
 :: Script to start a new MazeRun simulation session on Windows
 :: Usage: scripts\start_simulation.bat <player_id>
 
+set TEAM_ID=25
 set PLAYER_ID=%1
 
 if "%PLAYER_ID%"=="" (
@@ -60,7 +61,7 @@ if %ERRORLEVEL% EQU 0 (
     
     set EXE_PATH=game\server\mazerun.exe
     if exist %EXE_PATH% (
-        start "" "%EXE_PATH%" 25 --flagMessage 1 --delay 2 --broker broker.hivemq.com --portbroker 1883
+        start "" "%EXE_PATH%" %TEAM_ID% --flagMessage 1 --delay 2 --broker broker.hivemq.com --portbroker 1883
         echo [Launcher] Game started.
     ) else (
         echo [Launcher] ERROR: mazerun.exe not found at %EXE_PATH%
