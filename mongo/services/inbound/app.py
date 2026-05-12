@@ -24,14 +24,30 @@ def main():
         db_name=mongo_config.get("db", "game")
     )
 
-    processor = InboundProcessor(db)
+    team_id = config.get("team_id", 25)
+    processor = InboundProcessor(db, team_id=team_id)
     
-    # Filter topics: only those that provide data + the handshake topic
+    # Filter topics: only those that provide raw sensor data
+    # We avoid "processed/" topics to prevent loops
     all_topics = mqtt_config.get("topics", [])
-    data_topics = [t for t in all_topics if any(p in t for p in ["mazemov", "mazetemp", "mazesound", "mazeact"])]
-    # Add the trigger topic explicitly so MongoDB can receive the handshake
-    if "game/start" not in data_topics:
-        data_topics.append("game/start")
+    data_topics = []
+    for t in all_topics:
+        # Must contain sensor keyword and NOT contain "processed" or "persistence"
+        is_sensor = any(p in t for p in ["mazemov", "mazetemp", "mazesound", "mazeact"])
+        is_internal = any(p in t for p in ["processed", "persistence", "game/start/ack"])
+        
+        if is_sensor and not is_internal:
+            data_topics.append(t)
+
+    # We use a team-specific topic to avoid collisions on public brokers
+    team_id = config.get("team_id", 25)
+    topic_start = f"pisid/{team_id}/game/start"
+    print(f"[Inbound] Configuring for Team {team_id}. Handshake Topic: {topic_start}")
+    
+    if topic_start not in data_topics:
+        data_topics.append(topic_start)
+
+    print(f"[Inbound] Subscribing to topics: {data_topics}")
 
     mqtt = InboundMQTTClient(
         broker=mqtt_config.get("broker"),

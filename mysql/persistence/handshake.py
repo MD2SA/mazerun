@@ -30,7 +30,8 @@ def main():
     try:
         cursor = db.db.cursor()
         # Using Stored Procedure to create simulation
-        cursor.callproc("sp_create_game", ("Handshake Session", 25, player_id))
+        team_id = config.get("team_id", 25)
+        cursor.callproc("sp_create_game", ("Handshake Session", team_id, player_id))
         
         # Get the result from the SELECT inside the SP
         for result in cursor.stored_results():
@@ -60,15 +61,20 @@ def main():
         except:
             pass
 
+    team_id = config.get("team_id", 25)
+    topic_start = f"pisid/{team_id}/game/start"
+    topic_ack = f"pisid/{team_id}/game/start/ack"
+    print(f"[Handshake] Using isolation topics: START={topic_start}, ACK={topic_ack}")
+
     print(f"[Handshake] Connecting to MQTT broker {mqtt_config.get('broker')}...")
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1)
     client.on_message = on_message
     client.connect(mqtt_config.get("broker"), mqtt_config.get("port"))
-    client.subscribe("game/start/ack")
+    client.subscribe(topic_ack)
     client.loop_start()
 
-    print(f"[Handshake] Notifying MongoDB (game/start)...")
-    client.publish("game/start", json.dumps({
+    print(f"[Handshake] Notifying MongoDB ({topic_start})...")
+    client.publish(topic_start, json.dumps({
         "player_id": player_id, 
         "simulation_id": sim_id
     }), qos=1)

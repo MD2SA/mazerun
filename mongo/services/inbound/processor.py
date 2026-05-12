@@ -16,10 +16,11 @@ class InboundProcessor:
     session only applies to documents inserted after the game/start event.
     """
 
-    def __init__(self, db, mqtt_publisher=None):
+    def __init__(self, db, mqtt_publisher=None, team_id=25):
         self.db = db
         # mqtt_publisher must expose .publish(topic, payload) for the ACK
         self.mqtt_publisher = mqtt_publisher
+        self.team_id = team_id
 
         # In-memory cache: player_id (int) → {"player_id": …, "simulation_id": …}
         self._active_sessions: dict = {}
@@ -84,8 +85,9 @@ class InboundProcessor:
     # ------------------------------------------------------------------
 
     def process_message(self, topic, payload):
-        # ── game/start: register session and ACK ──────────────────────────
-        if topic == "game/start":
+        # ── team-specific game/start: register session and ACK ────────────
+        topic_start = f"pisid/{self.team_id}/game/start"
+        if topic == topic_start or topic == "game/start":
             self._handle_game_start(payload)
             return
 
@@ -109,8 +111,20 @@ class InboundProcessor:
 
     def _handle_game_start(self, payload):
         """Register active session and publish ACK back to MySQL/persistence."""
-        player_id = payload.get("player_id")
-        simulation_id = payload.get("simulation_id")
+        if isinstance(payload, dict):
+            player_id = payload.get("player_id")
+            try:
+                if player_id is not None:
+                    player_id = int(player_id)
+            except: pass
+            simulation_id = payload.get("simulation_id")
+        elif isinstance(payload, int):
+            print(f"[Inbound WARNING] game/start received raw integer: {payload}. Missing simulation_id.")
+            player_id = payload
+            simulation_id = None
+        else:
+            print(f"[Inbound ERROR] game/start received invalid payload: {payload} (Type: {type(payload)})")
+            return
 
         if player_id is None or simulation_id is None:
             print(
@@ -128,11 +142,12 @@ class InboundProcessor:
 
         # Publish ACK so that MySQL/persistence can unblock and launch mazerun.exe
         if self.mqtt_publisher:
+            topic_ack = f"pisid/{self.team_id}/game/start/ack"
             ack = json.dumps({"player_id": player_id, "simulation_id": simulation_id})
             try:
-                self.mqtt_publisher.publish("game/start/ack", ack)
+                self.mqtt_publisher.publish(topic_ack, ack)
                 print(
-                    f"[Inbound] ✔ Published game/start/ack for "
+                    f"[Inbound] ✔ Published ACK to {topic_ack} for "
                     f"player_id={player_id}, simulation_id={simulation_id}"
                 )
             except Exception as e:
@@ -197,20 +212,25 @@ class InboundProcessor:
 
         # 4. Stateful index update for movement documents
         if collection_name == "moves":
-            self._update_rooms(payload)
+            self._update_rooms(payload, doc.get("simulation_id"), doc.get("player_id"))
 
-    def _update_rooms(self, raw):
+    def _update_rooms(self, raw, simulation_id, player_id):
+        if not isinstance(raw, dict):
+            return
+
         origin = raw.get("RoomOrigin")
         destiny = raw.get("RoomDestiny")
         marsami_id = raw.get("Marsami")
 
+        # Isolation key: room + simulation
         if destiny is not None:
             self.db["rooms"].update_one(
-                {"_id": destiny},
+                {"room_id": destiny, "simulation_id": simulation_id},
                 {
                     "$inc": {"marsami_count": 1},
                     "$addToSet": {"current_marsamis": marsami_id},
                     "$set": {
+                        "player_id": player_id,
                         "process_status": "pending",
                         "last_update": datetime.now(timezone.utc),
                     },
@@ -220,7 +240,7 @@ class InboundProcessor:
 
         if origin is not None and origin != 0:
             self.db["rooms"].update_one(
-                {"_id": origin},
+                {"room_id": origin, "simulation_id": simulation_id},
                 {
                     "$inc": {"marsami_count": -1},
                     "$pull": {"current_marsamis": marsami_id},

@@ -76,14 +76,23 @@ class MongoChangeStreamDispatcher:
 
     def _fallback_polling(self):
         print("[ChangeStream] Polling started...")
+        queued_ids = set()
         while True:
             try:
-                for coll in self.queues.keys():
+                for coll, queue in self.queues.items():
+                    # Only find documents that are still pending
                     cursor = self.db[coll].find({"process_status": "pending"})
                     for doc in cursor:
-                        # Simple check to avoid duplicates in queue if still pending
-                        self.queues[coll].put((doc["_id"], doc))
-                time.sleep(1) # Poll every 1 second
+                        doc_id = str(doc["_id"])
+                        if doc_id not in queued_ids:
+                            queue.put((doc["_id"], doc))
+                            queued_ids.add(doc_id)
+                
+                # Clear tracking occasionally to keep memory low
+                if len(queued_ids) > 2000:
+                    queued_ids.clear()
+
+                time.sleep(2) # Poll every 2 seconds
             except Exception as e:
                 print(f"[Fallback Polling] Error: {e}")
                 time.sleep(5)

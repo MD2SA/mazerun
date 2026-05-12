@@ -34,33 +34,50 @@ class MySQLConnection:
         return self.db and self.db.is_connected()
 
     def call_sp(self, sp_name, args):
-        if not self.is_connected():
-            if not self.connect():
-                return 0
+        from mysql.connector import errorcode
+        import time
 
-        cursor = None
-        try:
-            cursor = self.db.cursor()
-            cursor.callproc(sp_name, args)
+        max_retries = 3
+        retry_count = 0
 
-            result = 0
-            for res in cursor.stored_results():
-                row = res.fetchone()
-                if row:
-                    result = row[0]
+        while retry_count < max_retries:
+            if not self.is_connected():
+                if not self.connect():
+                    return 0
 
-            self.db.commit()
-            return result
-        except Error as e:
-            print(f"[DB ERROR] SP Call {sp_name}: {e}")
+            cursor = None
             try:
-                self.db.rollback()
-            except:
-                pass
-            return 0
-        finally:
-            if cursor:
-                cursor.close()
+                cursor = self.db.cursor()
+                cursor.callproc(sp_name, args)
+
+                result = 0
+                for res in cursor.stored_results():
+                    row = res.fetchone()
+                    if row:
+                        result = row[0]
+
+                self.db.commit()
+                return result
+            except Error as e:
+                if e.errno == errorcode.ER_LOCK_DEADLOCK:
+                    retry_count += 1
+                    print(f"[DB ERROR] Deadlock on {sp_name}. Retrying ({retry_count}/{max_retries})...")
+                    time.sleep(0.1 * retry_count)
+                    continue
+
+                print(f"[DB ERROR] SP Call {sp_name}: {e}")
+                try:
+                    self.db.rollback()
+                except:
+                    pass
+                return 0
+            finally:
+                if cursor:
+                    try:
+                        cursor.close()
+                    except:
+                        pass
+        return 0
 
     def close(self):
         if self.db:

@@ -58,12 +58,14 @@ Especializada para o rastreio de jogadores no labirinto.
 
 ## 4. `rooms`
 
-Mantém o estado agregado das salas em tempo real.
-Neste caso, o `_id` é o número da sala.
+Mantém o estado agregado das salas em tempo real, isolado por simulação.
 
 ```json
 {
-  "_id": 5,
+  "_id": "ObjectId",           // Gerado automaticamente
+  "room_id": 5,                // Número da sala
+  "simulation_id": 50,         // ID da simulação (Isolamento)
+  "player_id": 1,              // ID do jogador associado
   "marsami_count": 3,
   "current_marsamis": [
     123,
