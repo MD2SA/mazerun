@@ -197,20 +197,22 @@ class InboundProcessor:
 
         # 4. Stateful index update for movement documents
         if collection_name == "moves":
-            self._update_rooms(payload)
+            self._update_rooms(payload, doc.get("simulation_id"), doc.get("player_id"))
 
-    def _update_rooms(self, raw):
+    def _update_rooms(self, raw, simulation_id, player_id):
         origin = raw.get("RoomOrigin")
         destiny = raw.get("RoomDestiny")
         marsami_id = raw.get("Marsami")
 
+        # Isolation key: room + simulation
         if destiny is not None:
             self.db["rooms"].update_one(
-                {"_id": destiny},
+                {"room_id": destiny, "simulation_id": simulation_id},
                 {
                     "$inc": {"marsami_count": 1},
                     "$addToSet": {"current_marsamis": marsami_id},
                     "$set": {
+                        "player_id": player_id,
                         "process_status": "pending",
                         "last_update": datetime.now(timezone.utc),
                     },
@@ -220,7 +222,7 @@ class InboundProcessor:
 
         if origin is not None and origin != 0:
             self.db["rooms"].update_one(
-                {"_id": origin},
+                {"room_id": origin, "simulation_id": simulation_id},
                 {
                     "$inc": {"marsami_count": -1},
                     "$pull": {"current_marsamis": marsami_id},
