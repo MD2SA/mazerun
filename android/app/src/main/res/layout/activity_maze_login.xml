@@ -33,8 +33,7 @@
         android:layout_height="wrap_content"
         android:hint="Email"
         android:inputType="textEmailAddress"
-        android:minHeight="48dp"
-        android:text="tfsps@iscte-iul.pt" />
+        android:minHeight="48dp" />
 
     <EditText
         android:id="@+id/etPassword"
@@ -42,8 +41,7 @@
         android:layout_height="wrap_content"
         android:hint="Password"
         android:inputType="textPassword"
-        android:minHeight="48dp"
-        android:text="12345" />
+        android:minHeight="48dp" />
 
     <EditText
         android:id="@+id/etDatabase"
