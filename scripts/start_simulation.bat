@@ -36,18 +36,21 @@ set PYTHON_EXE=python
 if exist "venv\Scripts\activate.bat" (
     echo [Launcher] Using venv from project root
     call venv\Scripts\activate.bat
+    set PYTHON_EXE=%CD%\venv\Scripts\python.exe
 ) else if exist "mysql\persistence\venv\Scripts\activate.bat" (
     echo [Launcher] Using venv from mysql\persistence
     call mysql\persistence\venv\Scripts\activate.bat
+    set PYTHON_EXE=%CD%\mysql\persistence\venv\Scripts\python.exe
 ) else if exist "mongo\venv\Scripts\activate.bat" (
     echo [Launcher] Using venv from mongo directory
     call mongo\venv\Scripts\activate.bat
+    set PYTHON_EXE=%CD%\mongo\venv\Scripts\python.exe
 )
 :: ----------------------
 
 :: Install Python dependencies automatically
 echo [Setup] Installing Python dependencies...
-%PYTHON_EXE% -m pip install -r requirements.txt --quiet
+"%PYTHON_EXE%" -m pip install -r requirements.txt --quiet
 if %ERRORLEVEL% NEQ 0 (
     echo ✘ WARNING: Failed to install some dependencies. Continuing anyway...
 )
@@ -57,7 +60,7 @@ echo 1. PERFORMING HANDSHAKE (MySQL Simulation + MongoDB ACK)
 echo -------------------------------------------------------
 
 :: Run the handshake script
-%PYTHON_EXE% mysql\persistence\handshake.py %PLAYER_ID%
+"%PYTHON_EXE%" mysql\persistence\handshake.py %PLAYER_ID%
 
 if %ERRORLEVEL% EQU 0 (
     echo.
@@ -69,7 +72,7 @@ if %ERRORLEVEL% EQU 0 (
     :: 1. Start the Persistence Service (The Real App) in the background
     :: On Windows, we use 'start' to run in a new minimized window or hidden
     set PYTHONPATH=%PYTHONPATH%;%CD%\mysql\persistence
-    start /B "MazeRunPersistence" %PYTHON_EXE% mysql\persistence\app.py ^> persistence_session.log 2^>^&1
+    start /B "MazeRunPersistence" "%PYTHON_EXE%" mysql\persistence\app.py ^> persistence_session.log 2^>^&1
     echo [Launcher] Persistence App started in background. Logs: persistence_session.log
 
     :: 2. Start the MazeRun Game
