@@ -20,6 +20,9 @@ set PYTHON_EXE=python
 if exist "venv\Scripts\activate.bat" (
     echo [Launcher] Using venv from project root
     call venv\Scripts\activate.bat
+) else if exist "bridge\venv\Scripts\activate.bat" (
+    echo [Launcher] Using venv from project root
+    call bridge\venv\Scripts\activate.bat
 ) else if exist "mysql\persistence\venv\Scripts\activate.bat" (
     echo [Launcher] Using venv from mysql\persistence
     call mysql\persistence\venv\Scripts\activate.bat
@@ -28,6 +31,13 @@ if exist "venv\Scripts\activate.bat" (
     call mongo\venv\Scripts\activate.bat
 )
 :: ----------------------
+
+:: Install Python dependencies automatically
+echo [Setup] Installing Python dependencies...
+%PYTHON_EXE% -m pip install -r requirements.txt --quiet
+if %ERRORLEVEL% NEQ 0 (
+    echo ✘ WARNING: Failed to install some dependencies. Continuing anyway...
+)
 
 echo -------------------------------------------------------
 echo 1. PERFORMING HANDSHAKE (MySQL Simulation + MongoDB ACK)
@@ -42,13 +52,6 @@ if %ERRORLEVEL% EQU 0 (
     echo 2. STARTING REAL APP ^& MAZERUN GAME
     echo -------------------------------------------------------
     
-    :: 0. Check for dependencies
-    %PYTHON_EXE% -c "import paho.mqtt; import mysql.connector; import dateutil" >nul 2>&1
-    if %ERRORLEVEL% NEQ 0 (
-        echo ✘ ERROR: Missing Python dependencies in the current environment (%PYTHON_EXE%).
-        echo Please run: pip install paho-mqtt mysql-connector-python python-dateutil
-        exit /b 1
-    fi
 
     :: 1. Start the Persistence Service (The Real App) in the background
     :: On Windows, we use 'start' to run in a new minimized window or hidden
