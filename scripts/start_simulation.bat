@@ -15,14 +15,27 @@ if "%PLAYER_ID%"=="" (
 :: Ensure we are in the project root
 cd %~dp0\..
 
+:: --- AUTO-CREATE VENV IF NEEDED ---
+if not exist "venv\Scripts\activate.bat" (
+    if not exist "mysql\persistence\venv\Scripts\activate.bat" (
+        if not exist "mongo\venv\Scripts\activate.bat" (
+            echo [Setup] No virtual environment found. Creating venv in project root...
+            python -m venv venv
+            if %ERRORLEVEL% NEQ 0 (
+                echo ✘ ERROR: Failed to create virtual environment
+                exit /b 1
+            )
+            echo [Setup] Virtual environment created successfully!
+        )
+    )
+)
+:: ----------------------
+
 :: --- VENV DETECTION ---
 set PYTHON_EXE=python
 if exist "venv\Scripts\activate.bat" (
     echo [Launcher] Using venv from project root
     call venv\Scripts\activate.bat
-) else if exist "bridge\venv\Scripts\activate.bat" (
-    echo [Launcher] Using venv from project root
-    call bridge\venv\Scripts\activate.bat
 ) else if exist "mysql\persistence\venv\Scripts\activate.bat" (
     echo [Launcher] Using venv from mysql\persistence
     call mysql\persistence\venv\Scripts\activate.bat
