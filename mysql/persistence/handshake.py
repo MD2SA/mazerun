@@ -67,7 +67,7 @@ def main():
     print(f"[Handshake] Using isolation topics: START={topic_start}, ACK={topic_ack}")
 
     print(f"[Handshake] Connecting to MQTT broker {mqtt_config.get('broker')}...")
-    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1)
+    client = mqtt.Client()
     client.on_message = on_message
     client.connect(mqtt_config.get("broker"), mqtt_config.get("port"))
     client.subscribe(topic_ack)
