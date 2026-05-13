@@ -1,6 +1,9 @@
 @echo off
 echo === STARTING MAZERUN INFRASTRUCTURE (MONGO + MYSQL) ===
 
+:: Ensure we are in the project root
+cd %~dp0\..
+
 set /p reset_db="Do you want to RESET the databases? (This will DELETE ALL DATA and re-run SQL scripts) [y/N]: "
 
 if /i "%reset_db%"=="y" (
@@ -22,8 +25,8 @@ cd ..
 
 :: 2. Start MySQL DB (Database only, the App is started via session script)
 echo [2/2] Starting MYSQL database...
-cd mysql
 :: We only start the db and phpmyadmin, mysql-app is handled by start_simulation.bat
+cd mysql
 docker-compose up -d mysql-db phpmyadmin
 cd ..
 
