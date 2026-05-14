@@ -1,7 +1,7 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, Users as UsersIcon, History, PlayCircle, LogOut, 
+import {
+  LayoutDashboard, Users as UsersIcon, History, PlayCircle, LogOut,
   Settings, Filter, ChevronDown, Activity, Globe, Sun, Moon
 } from 'lucide-react';
 
@@ -15,7 +15,7 @@ import Logs from './pages/Logs';
 const AppContext = createContext();
 export const useApp = () => useContext(AppContext);
 
-const Sidebar = ({ user, onLogout, theme, toggleTheme }) => {
+const Sidebar = ({ user, onLogout, theme }) => {
   const location = useLocation();
   const menu = [
     { name: 'Overview', path: '/', icon: LayoutDashboard },
@@ -35,9 +35,9 @@ const Sidebar = ({ user, onLogout, theme, toggleTheme }) => {
 
       <nav style={{ flex: 1, padding: '0 1rem' }}>
         {menu.map(item => (
-          <Link 
-            key={item.path} 
-            to={item.path} 
+          <Link
+            key={item.path}
+            to={item.path}
             className={`btn btn-ghost w-100 ${location.pathname === item.path ? 'active' : ''}`}
             style={{ justifyContent: 'flex-start', marginBottom: '0.25rem', color: location.pathname === item.path ? (theme === 'dark' ? 'white' : 'var(--primary)') : 'var(--text-secondary)' }}
           >
@@ -47,15 +47,7 @@ const Sidebar = ({ user, onLogout, theme, toggleTheme }) => {
       </nav>
 
       <div style={{ padding: '1.5rem', borderTop: '1px solid var(--border)' }}>
-        <button
-          onClick={toggleTheme}
-          className="btn btn-ghost w-100"
-          style={{ justifyContent: 'flex-start', marginBottom: '1rem' }}
-        >
-          {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-          {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-        </button>
-        <div style={{ marginBottom: '1rem' }}>
+        <div style={{ marginBottom: '2rem' }}>
           <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Logged in as</p>
           <p style={{ fontWeight: 600, fontSize: '0.85rem' }}>{user.email}</p>
           <span className={`badge badge-${user.type.toLowerCase()}`} style={{ marginTop: '0.4rem', display: 'inline-block' }}>
@@ -74,13 +66,13 @@ const Header = ({ user, teamFilter, setTeamFilter, theme, toggleTheme }) => {
   return (
     <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
       <h1 style={{ fontSize: '1.5rem', fontWeight: 600 }}>{document.title || 'Dashboard'}</h1>
-      
+
       <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
         {user.type === 'adm' && (
           <div className="d-flex align-items-center gap-2">
             <Globe size={16} color="var(--text-secondary)" />
-            <select 
-              value={teamFilter || ''} 
+            <select
+              value={teamFilter || ''}
               onChange={(e) => setTeamFilter(e.target.value || null)}
               style={{ background: 'var(--bg-card)', fontSize: '0.85rem' }}
             >
