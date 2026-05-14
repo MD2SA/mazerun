@@ -1,7 +1,7 @@
 @echo off
 echo === STARTING MAZERUN INFRASTRUCTURE (MONGO + MYSQL) ===
 
-set /p reset_db="Do you want to RESET the databases? (This will DELETE ALL DATA) [y/N]: "
+set /p reset_db="Do you want to RESET the databases? (This will DELETE ALL DATA) [Y/N]: "
 
 if /i "%reset_db%"=="y" (
     echo [Clean] Stopping services and removing volumes...
