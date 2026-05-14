@@ -24,3 +24,9 @@ android/.idea/
 android/**/*.iml
 android/app/build/
 
+ 
+# IDE
+.idea/
+
+# Node
+node_modules/

@@ -1,95 +1,70 @@
 @echo off
 setlocal EnableDelayedExpansion
 
-set CONTAINER=mysql
+@echo off
+setlocal EnableDelayedExpansion
+
+set CONTAINER=mazerun-mysql-db
 set DB=mazerun
 set USER=root
 set PASSWORD=root
-set HOST_FILE=.\dbs\mysql\dump.sql
-set CONTAINER_FILE=/backup/dump.sql
+set CONTAINER_FILE=/tmp/dump.sql
 
-echo Applying schema to database '%DB%' ...
+cd /d "%~dp0\.."
+set HOST_DIR=.\mysql\db
+
+echo Applying schema and procedures to database '%DB%' ...
 echo.
 
-:: Verificar existência nos dois lados
-set host_exists=no
-set container_exists=no
-
-if exist "%HOST_FILE%" set host_exists=yes
-
-docker exec %CONTAINER% test -f %CONTAINER_FILE% >nul 2>&1
-if %ERRORLEVEL% EQU 0 set container_exists=yes
-
-if "%host_exists%"=="no" if "%container_exists%"=="no" (
-    echo Error: Dump file not found in EITHER location!
-    echo   Host:      %HOST_FILE%
-    echo   Container: %CONTAINER_FILE%
-    echo.
-    pause
-    exit /b 1
-)
-
-:: Só no container → usa direto
-if "%host_exists%"=="no" if "%container_exists%"=="yes" (
-    echo File found ONLY inside container → using it directly
-    set should_copy=no
-    goto :import_step
-)
-
-:: Existe no host (pode ou não existir no container)
-set should_copy=yes
-
-if "%container_exists%"=="yes" (
-    echo File already exists inside container: %CONTAINER_FILE%
-
-    :: Hash MD5 host
-    for /f "skip=1 tokens=* delims=" %%# in ('certutil -hashfile "%HOST_FILE%" MD5 ^| findstr /v ":"') do set "host_md5=%%#"
-    set "host_md5=!host_md5: =!"
-
-    :: Hash MD5 container
-    for /f "delims=" %%# in ('docker exec %CONTAINER% certutil -hashfile %CONTAINER_FILE% MD5 ^| findstr /v ":"') do set "cont_md5=%%#"
-    set "cont_md5=!cont_md5: =!"
-
-    if "!host_md5!"=="!cont_md5!" if not "!host_md5!"=="" (
-        echo Files are identical (same MD5) → skipping copy
-        set should_copy=no
-    ) else (
-        echo Files are different (or hash failed) → will copy/overwrite
-    )
-) else (
-    echo File exists only on host → will copy
-)
-
-if "%should_copy%"=="yes" (
-    echo.
-    echo Copying dump file into container...
-    docker cp "%HOST_FILE%" %CONTAINER%:%CONTAINER_FILE%
-    if errorlevel 1 (
-        echo Error: Failed to copy file to container.
-        pause
-        exit /b 1
-    )
-) else (
-    echo Skipping copy ^(already present and identical or only in container^)
-)
-
-:import_step
-
-:: Confirma que existe dentro do container
-docker exec %CONTAINER% test -f %CONTAINER_FILE% >nul 2>&1
+:: Check if container is running
+docker ps --filter "name=%CONTAINER%" --format "{{.Names}}" | findstr /I "%CONTAINER%" >nul
 if errorlevel 1 (
-    echo Error: Something went wrong - file is still not present in container
+    echo Error: Container %CONTAINER% is not running.
+    echo Please start it with 'docker-compose up' first.
     pause
     exit /b 1
 )
 
-echo.
-echo Dropping and recreating database ^(this will delete all current data!^)...
-docker exec %CONTAINER% mysql -u%USER% -p%PASSWORD% -e "DROP DATABASE IF EXISTS %DB%; CREATE DATABASE %DB%;"
-
-echo.
-echo Importing from container path: %CONTAINER_FILE% ...
+:: Apply dump.sql
+echo [1/5] Applying base dump...
+docker cp "%HOST_DIR%\dump.sql" %CONTAINER%:%CONTAINER_FILE%
 docker exec %CONTAINER% bash -c "mysql -u%USER% -p%PASSWORD% %DB% < %CONTAINER_FILE%"
+
+:: Apply user_procedures.sql
+echo [2/5] Applying user procedures...
+docker cp "%HOST_DIR%\user_procedures.sql" %CONTAINER%:%CONTAINER_FILE%
+docker exec %CONTAINER% bash -c "mysql -u%USER% -p%PASSWORD% %DB% < %CONTAINER_FILE%"
+
+:: Apply simulation_procedures.sql
+echo [3/5] Applying simulation procedures...
+docker cp "%HOST_DIR%\simulation_procedures.sql" %CONTAINER%:%CONTAINER_FILE%
+docker exec %CONTAINER% bash -c "mysql -u%USER% -p%PASSWORD% %DB% < %CONTAINER_FILE%"
+
+:: Apply persistence_routines.sql
+echo [4/5] Applying persistence routines...
+docker cp "%HOST_DIR%\persistence_routines.sql" %CONTAINER%:%CONTAINER_FILE%
+docker exec %CONTAINER% bash -c "mysql -u%USER% -p%PASSWORD% %DB% < %CONTAINER_FILE%"
+
+:: Apply roles.sql
+echo [5/5] Applying roles...
+docker cp "%HOST_DIR%\roles.sql" %CONTAINER%:%CONTAINER_FILE%
+docker exec %CONTAINER% bash -c "mysql -u%USER% -p%PASSWORD% %DB% < %CONTAINER_FILE%"
+
+if %ERRORLEVEL% EQU 0 (
+    echo.
+    echo All database components applied successfully!
+) else (
+    echo.
+    echo Error during application. Please check the output above.
+)
+
+if %ERRORLEVEL% EQU 0 (
+    echo.
+    echo All database components applied successfully!
+) else (
+    echo.
+    echo Error during application. Please check the output above.
+)
 
 if %ERRORLEVEL% EQU 0 (
     echo.

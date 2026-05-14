@@ -29,9 +29,9 @@ def main():
 
     try:
         cursor = db.db.cursor()
-        # Using Stored Procedure to create simulation
+        # Using Stored Procedure to create simulation (4 arguments: requester_email, description, team_id, player_id)
         team_id = config.get("team_id", 25)
-        cursor.callproc("sp_create_game", ("Handshake Session", team_id, player_id))
+        cursor.callproc("sp_create_game", ("admin@mazerun.io", "Handshake Session", team_id, player_id))
         
         # Get the result from the SELECT inside the SP
         for result in cursor.stored_results():
@@ -73,17 +73,25 @@ def main():
     client.subscribe(topic_ack)
     client.loop_start()
 
-    print(f"[Handshake] Notifying MongoDB ({topic_start})...")
-    client.publish(topic_start, json.dumps({
-        "player_id": player_id, 
-        "simulation_id": sim_id
-    }), qos=1)
-
-    # Wait for ACK with timeout
-    timeout = 15
+    # Wait for ACK with timeout and retries
+    timeout = 20
     start_time = time.time()
+    last_publish_time = 0
+    publish_interval = 3  # Retry publish every 3 seconds
+
+    print(f"[Handshake] Waiting for MongoDB ACK (timeout: {timeout}s)...")
+
     while not ack_received and (time.time() - start_time) < timeout:
-        time.sleep(0.2)
+        current_time = time.time()
+        if (current_time - last_publish_time) > publish_interval:
+            print(f"[Handshake] Publishing start message to {topic_start}...")
+            client.publish(topic_start, json.dumps({
+                "player_id": player_id,
+                "simulation_id": sim_id
+            }), qos=1)
+            last_publish_time = current_time
+
+        time.sleep(0.5)
 
     client.loop_stop()
     client.disconnect()
