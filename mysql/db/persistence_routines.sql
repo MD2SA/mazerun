@@ -150,7 +150,7 @@ CREATE PROCEDURE sp_insert_simulation(
 )
 BEGIN
     INSERT IGNORE INTO simulation (id, description, team, startDate, user_email, player_id)
-    VALUES (p_sim_id, CONCAT('Simulation ', p_sim_id), p_team, p_start_date, 'aluno@iscte-iul.pt', p_player_id);
+    VALUES (p_sim_id, CONCAT('Simulation ', p_sim_id), p_team, p_start_date, 'admin@mazerun.io', p_player_id);
 END //
 
 DROP PROCEDURE IF EXISTS sp_insert_action //

@@ -1,86 +1,47 @@
 USE mazerun;
--- Stored procedures to manage the table 'simulation'
+-- Stored procedures to manage 'simulation' with RBAC enforcement
 
--- Procedure to create a new game/simulation
 DELIMITER //
 
+-- Procedure to create a new game/simulation (Admin only)
+DROP PROCEDURE IF EXISTS sp_create_game //
 CREATE PROCEDURE sp_create_game(
+    IN p_current_user_email VARCHAR(50),
     IN p_descricao TEXT,
     IN p_equipa INT,
     IN p_player_id INT
 )
 BEGIN
-    DECLARE EXIT HANDLER FOR SQLEXCEPTION
-    BEGIN
-        GET DIAGNOSTICS CONDITION 1
-        @p_message = MESSAGE_TEXT;
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = @p_message;
-    END;
+    DECLARE v_current_type ENUM('usr', 'adm');
+    SELECT type INTO v_current_type FROM user WHERE email = p_current_user_email;
 
-    INSERT INTO simulation (description, team, startDate, player_id)
-    VALUES (p_descricao, p_equipa, NOW(), p_player_id);
-
-    SELECT LAST_INSERT_ID() AS game_id, 'Game created successfully' AS message;
+    IF v_current_type = 'adm' THEN
+        INSERT INTO simulation (description, team, startDate, player_id, user_email)
+        VALUES (p_descricao, p_equipa, NOW(), p_player_id, p_current_user_email);
+        SELECT LAST_INSERT_ID() AS game_id, 'Game created successfully' AS message;
+    ELSE
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Permission denied: Only admins can create simulations';
+    END IF;
 END //
 
--- Procedure to update an existing game/simulation
+-- Procedure to update an existing game/simulation (Admin only)
+DROP PROCEDURE IF EXISTS sp_update_game //
 CREATE PROCEDURE sp_update_game(
+    IN p_current_user_email VARCHAR(50),
+    IN p_id INT,
     IN p_descricao TEXT,
-    IN p_id INT
+    IN p_equipa INT
 )
 BEGIN
-    DECLARE EXIT HANDLER FOR SQLEXCEPTION
-    BEGIN
-        GET DIAGNOSTICS CONDITION 1
-        @p_message = MESSAGE_TEXT;
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = @p_message;
-    END;
+    DECLARE v_current_type ENUM('usr', 'adm');
+    SELECT type INTO v_current_type FROM user WHERE email = p_current_user_email;
 
-    IF EXISTS (SELECT 1 FROM simulation WHERE id = p_id) THEN
-        UPDATE simulation
-        SET description = p_descricao
-        WHERE id = p_id;
-
+    IF v_current_type = 'adm' THEN
+        UPDATE simulation SET description = p_descricao, team = p_equipa WHERE id = p_id;
         SELECT 'Game updated successfully' AS message;
     ELSE
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Game not found';
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Permission denied: Only admins can update simulations';
     END IF;
-END //
-
--- Procedure to get games for logged user or specific user if admin
-CREATE PROCEDURE sp_get_user_games(
-    IN p_email VARCHAR(50)
-)
-BEGIN
-    DECLARE user_type VARCHAR(3);
-
-    -- Get user type to determine if admin
-    SELECT type INTO user_type
-    FROM user
-    WHERE email = p_email;
-
-    -- If user is admin (assuming 'ADM' or similar), return all games
-    -- Otherwise return only games for that user
-    IF user_type = 'ADM' THEN
-        SELECT s.id, s.description, s.team, s.user_email, s.startDate
-        FROM simulation s
-        ORDER BY s.startDate DESC;
-    ELSE
-        SELECT s.id, s.description, s.team, s.user_email, s.startDate
-        FROM simulation s
-        WHERE s.user_email = p_email
-        ORDER BY s.startDate DESC;
-    END IF;
-END //
-
--- Procedure to get all games (admin only)
-CREATE PROCEDURE sp_get_all_games()
-BEGIN
-    SELECT s.id, s.description, s.team, s.user_email, s.startDate
-    FROM simulation s
-    ORDER BY s.startDate DESC;
 END //
 
 DELIMITER ;
-
-

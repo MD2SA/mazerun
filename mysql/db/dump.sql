@@ -35,10 +35,10 @@ DROP TABLE IF EXISTS `user`;
 CREATE TABLE `user` (
   `name` varchar(100) NOT NULL,
   `phone` varchar(12) NOT NULL,
-  `type` varchar(3) NOT NULL,
+  `type` enum('usr','adm') NOT NULL DEFAULT 'usr',
   `email` varchar(50) NOT NULL,
   `birth` date NOT NULL,
-  `team` int NOT NULL,
+  `team` int DEFAULT NULL,
   PRIMARY KEY (`email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -49,6 +49,7 @@ CREATE TABLE `user` (
 
 LOCK TABLES `user` WRITE;
 /*!40000 ALTER TABLE `user` DISABLE KEYS */;
+INSERT INTO `user` VALUES ('System Admin','910000000','adm','admin@mazerun.io','1990-01-01',NULL);
 /*!40000 ALTER TABLE `user` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -63,7 +64,7 @@ CREATE TABLE `simulation` (
   `id` int NOT NULL AUTO_INCREMENT,
   `description` text NOT NULL,
   `team` int NOT NULL,
-  `user_email` varchar(255) DEFAULT NULL,
+  `user_email` varchar(50) DEFAULT NULL,
   `startDate` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `player_id` int DEFAULT NULL,
   PRIMARY KEY (`id`),
