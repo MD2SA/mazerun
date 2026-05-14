@@ -1,102 +1,93 @@
 USE mazerun;
--- Stored procedures to manage the table 'user'
+-- Stored procedures to manage the table 'user' with RBAC enforcement
 
--- Procedure to create a new user
+-- Procedure to create a new user (Sign-up)
 DELIMITER //
 
+DROP PROCEDURE IF EXISTS sp_create_user //
 CREATE PROCEDURE sp_create_user(
     IN p_name VARCHAR(100),
     IN p_phone VARCHAR(12),
-    IN p_type VARCHAR(3),
+    IN p_type ENUM('usr', 'adm'),
     IN p_email VARCHAR(50),
-    IN p_password VARCHAR(255),
     IN p_birth DATE,
     IN p_team INT
 )
 BEGIN
-    DECLARE EXIT HANDLER FOR SQLEXCEPTION
-    BEGIN
-        GET DIAGNOSTICS CONDITION 1
-        @p_message = MESSAGE_TEXT;
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = @p_message;
-    END;
+    -- Admins should not have a team
+    IF p_type = 'adm' THEN
+        SET p_team = NULL;
+    END IF;
 
-    INSERT INTO user (name, phone, type, email, password, birth, team)
-    VALUES (p_name, p_phone, p_type, p_email, p_password, p_birth, p_team);
-
+    INSERT INTO user (name, phone, type, email, birth, team)
+    VALUES (p_name, p_phone, p_type, p_email, p_birth, p_team);
     SELECT 'User created successfully' AS message;
 END //
 
--- Procedure to update an existing user
+-- Procedure to update a user (RBAC)
+DROP PROCEDURE IF EXISTS sp_update_user //
 CREATE PROCEDURE sp_update_user(
-    IN p_email VARCHAR(50),
+    IN p_current_user_email VARCHAR(50),
+    IN p_target_email VARCHAR(50),
     IN p_name VARCHAR(100),
     IN p_phone VARCHAR(12),
-    IN p_type VARCHAR(3),
-    IN p_password VARCHAR(255),
+    IN p_type ENUM('usr', 'adm'),
     IN p_birth DATE,
     IN p_team INT
 )
 BEGIN
-    DECLARE EXIT HANDLER FOR SQLEXCEPTION
-    BEGIN
-        GET DIAGNOSTICS CONDITION 1
-        @p_message = MESSAGE_TEXT;
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = @p_message;
-    END;
+    DECLARE v_current_type ENUM('usr', 'adm');
+    DECLARE v_new_type ENUM('usr', 'adm');
 
-    IF EXISTS (SELECT 1 FROM user WHERE email = p_email) THEN
+    SELECT type INTO v_current_type FROM user WHERE email = p_current_user_email;
+    
+    -- Admins can update anyone, users can only update themselves
+    IF v_current_type = 'adm' OR p_current_user_email = p_target_email THEN
+        SET v_new_type = CASE WHEN v_current_type = 'adm' THEN p_type ELSE (SELECT type FROM user WHERE email = p_target_email) END;
+
+        -- Admins should not have a team
+        IF v_new_type = 'adm' THEN
+            SET p_team = NULL;
+        END IF;
+
         UPDATE user
         SET name = p_name,
             phone = p_phone,
-            type = p_type,
-            password = p_password,
+            type = v_new_type,
             birth = p_birth,
             team = p_team
-        WHERE email = p_email;
-
+        WHERE email = p_target_email;
         SELECT 'User updated successfully' AS message;
     ELSE
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'User not found';
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Permission denied: Cannot update other users';
     END IF;
 END //
 
--- Procedure to delete a user
+-- Procedure to delete a user (RBAC)
+DROP PROCEDURE IF EXISTS sp_delete_user //
 CREATE PROCEDURE sp_delete_user(
-    IN p_email VARCHAR(50)
+    IN p_current_user_email VARCHAR(50),
+    IN p_target_email VARCHAR(50)
 )
 BEGIN
-    DECLARE EXIT HANDLER FOR SQLEXCEPTION
-    BEGIN
-        GET DIAGNOSTICS CONDITION 1
-        @p_message = MESSAGE_TEXT;
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = @p_message;
-    END;
-
-    IF EXISTS (SELECT 1 FROM user WHERE email = p_email) THEN
-        DELETE FROM user WHERE email = p_email;
+    DECLARE v_current_type ENUM('usr', 'adm');
+    
+    SELECT type INTO v_current_type FROM user WHERE email = p_current_user_email;
+    
+    -- Admins can delete anyone, users can only delete themselves
+    IF v_current_type = 'adm' OR p_current_user_email = p_target_email THEN
+        DELETE FROM user WHERE email = p_target_email;
         SELECT 'User deleted successfully' AS message;
     ELSE
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'User not found';
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Permission denied: Cannot delete other users';
     END IF;
 END //
 
--- Procedure to get a user by email
-CREATE PROCEDURE sp_get_user(
-    IN p_email VARCHAR(50)
-)
-BEGIN
-    SELECT name, phone, type, email, birth, team
-    FROM user
-    WHERE email = p_email;
-END //
-
--- Procedure to get all users (admin only)
+-- Get all users (Admin only logic should be in API, but this procedure exists)
+DROP PROCEDURE IF EXISTS sp_get_all_users //
 CREATE PROCEDURE sp_get_all_users()
 BEGIN
-    SELECT name, phone, type, email, birth, team
-    FROM user
-    ORDER BY email;
+    SELECT name, phone, type, email, birth, team FROM user ORDER BY name;
 END //
 
 DELIMITER ;
