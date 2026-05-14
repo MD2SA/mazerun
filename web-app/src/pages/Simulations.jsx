@@ -78,13 +78,15 @@ const SimulationDetails = ({ simulation, onClose }) => {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data.occupation}>
                 <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} vertical={false} />
-                <XAxis dataKey="room" stroke={chartColors.text} fontSize={12} tickLine={false} axisLine={false} label={{ value: 'Room', position: 'insideBottom', offset: -5, fill: chartColors.text }} />
+                <XAxis dataKey="room" stroke={chartColors.text} fontSize={12} tickLine={false} axisLine={false} label={{ value: 'Room ID', position: 'insideBottom', offset: -5, fill: chartColors.text, fontSize: 10 }} />
                 <YAxis stroke={chartColors.text} fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
                 <Tooltip
                   cursor={{ fill: theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}
                   contentStyle={{ background: chartColors.tooltipBg, border: `1px solid ${chartColors.tooltipBorder}`, color: chartColors.tooltipText }}
                 />
-                <Bar dataKey="value" fill="#10b981" radius={[4, 4, 0, 0]} barSize={40} />
+                <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
+                <Bar dataKey="odd" name="Odd Marsamis" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="even" name="Even Marsamis" stackId="a" fill="#3b82f6" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
