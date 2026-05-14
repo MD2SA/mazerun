@@ -19,6 +19,15 @@ if exist "venv\Scripts\activate.bat" (
 ) else if exist "mysql\persistence\venv\Scripts\activate.bat" (
     echo [Launcher] Using mysql\persistence venv
     call mysql\persistence\venv\Scripts\activate.bat
+) else (
+    echo [Launcher] No venv found. Creating one in root project...
+    python -m venv venv
+    if %ERRORLEVEL% NEQ 0 (
+        echo ✘ ERROR: Failed to create virtual environment
+        exit /b 1
+    )
+    echo [Launcher] venv created successfully. Activating...
+    call venv\Scripts\activate.bat
 )
 
 echo -------------------------------------------------------
@@ -43,7 +52,7 @@ start /B "MazeRun-Persistence" %PYTHON_EXE% mysql\persistence\app.py > persisten
 echo [Launcher] ✔ Persistence App started in background.
 
 :: Start Game
-set EXE_PATH=game\server\mazerun.exe
+set EXE_PATH=server\mazerun.exe
 if exist "%EXE_PATH%" (
     echo [Launcher] Starting mazerun.exe ...
     start "" "%EXE_PATH%" %TEAM_ID% --flagMessage 1 --delay 2 --broker broker.hivemq.com --portbroker 1883
