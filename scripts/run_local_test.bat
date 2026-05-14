@@ -1,7 +1,7 @@
 @echo off
 echo === STARTING MAZERUN INFRASTRUCTURE (MONGO + MYSQL) ===
 
-set /p reset_db="Do you want to RESET the databases? (This will DELETE ALL DATA) [Y/N]: "
+set /p reset_db="Do you want to RESET the databases? (This will DELETE ALL DATA) [y/N]: "
 
 if /i "%reset_db%"=="y" (
     echo [Clean] Stopping services and removing volumes...
@@ -10,13 +10,15 @@ if /i "%reset_db%"=="y" (
     echo [Clean] Reset complete.
 )
 
+cd /d "%~dp0\.."
+
 :: 1. Start Mongo services
 echo [1/2] Starting MONGO services...
 pushd mongo && docker-compose up -d --build && popd
 
-:: 2. Start MySQL (only DB + phpMyAdmin)
+:: 2. Start MySQL (only DB + phpMyAdmin + PHP)
 echo [2/2] Starting MYSQL database...
-pushd mysql && docker-compose up -d mysql-db phpmyadmin && popd
+pushd mysql && docker-compose up -d mysql-db phpmyadmin php && popd
 
 echo -------------------------------------------------------
 echo Infrastructure is running!
