@@ -5,7 +5,7 @@
   --bg-sidebar: #121214;
   --bg-card: #18181b;
   --bg-input: #27272a;
-  --primary: #3b82f6;
+  --primary: #5a3bf6;
   --primary-glow: rgba(59, 130, 246, 0.2);
   --text-primary: #fafafa;
   --text-secondary: #a1a1aa;
@@ -21,14 +21,18 @@
   --bg-sidebar: #ffffff;
   --bg-card: #ffffff;
   --bg-input: #e4e4e7;
-  --primary: #2563eb;
+  --primary: #5a3bf6;
   --primary-glow: rgba(37, 99, 235, 0.1);
   --text-primary: #09090b;
   --text-secondary: #71717a;
   --border: #e4e4e7;
 }
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
 
 body {
   font-family: 'Inter', sans-serif;
@@ -38,7 +42,10 @@ body {
 }
 
 /* Layout */
-.app-container { display: flex; min-height: 100vh; }
+.app-container {
+  display: flex;
+  min-height: 100vh;
+}
 
 .sidebar {
   width: var(--sidebar-width);
@@ -64,7 +71,10 @@ body {
   padding: 1.5rem;
   transition: border-color 0.2s;
 }
-.card:hover { border-color: var(--primary); }
+
+.card:hover {
+  border-color: var(--primary);
+}
 
 .stat-grid {
   display: grid;
@@ -73,13 +83,23 @@ body {
   margin-bottom: 2rem;
 }
 
-.stat-card h3 { font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0.5rem; }
-.stat-card .value { font-size: 1.8rem; font-weight: 700; }
+.stat-card h3 {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.stat-card .value {
+  font-size: 1.8rem;
+  font-weight: 700;
+}
 
 .table {
   width: 100%;
   border-collapse: collapse;
 }
+
 .table th {
   padding: 1rem;
   text-align: left;
@@ -88,6 +108,7 @@ body {
   text-transform: uppercase;
   border-bottom: 1px solid var(--border);
 }
+
 .table td {
   padding: 1rem;
   border-bottom: 1px solid var(--border);
@@ -105,16 +126,47 @@ body {
   border: 1px solid transparent;
   transition: 0.2s;
 }
-.btn-primary { background: var(--primary); color: white; }
-.btn-primary:hover { opacity: 0.9; box-shadow: 0 0 15px var(--primary-glow); }
-.btn-ghost { background: transparent; color: var(--text-secondary); }
-.btn-ghost:hover { color: white; background: var(--border); }
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+  box-shadow: 0 0 15px var(--primary-glow);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.btn-ghost:hover {
+  color: white;
+  background: var(--border);
+}
 
 /* Logs View */
-.log-ALERT { color: var(--accent-danger); background: rgba(239, 68, 68, 0.1); }
-.log-ACTION { color: var(--primary); background: rgba(59, 130, 246, 0.1); }
-.log-INVALID { color: var(--accent-warning); background: rgba(245, 158, 11, 0.1); }
-.log-OUTLIER { color: #8b5cf6; background: rgba(139, 92, 246, 0.1); }
+.log-ALERT {
+  color: var(--accent-danger);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.log-ACTION {
+  color: var(--primary);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.log-INVALID {
+  color: var(--accent-warning);
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.log-OUTLIER {
+  color: #8b5cf6;
+  background: rgba(139, 92, 246, 0.1);
+}
 
 .log-entry {
   font-family: 'JetBrains Mono', monospace;
@@ -123,9 +175,18 @@ body {
   border-left: 3px solid transparent;
   margin-bottom: 0.25rem;
 }
-.log-entry.log-ALERT { border-left-color: var(--accent-danger); }
-.log-entry.log-ACTION { border-left-color: var(--primary); }
-.log-entry.log-INVALID { border-left-color: var(--accent-warning); }
+
+.log-entry.log-ALERT {
+  border-left-color: var(--accent-danger);
+}
+
+.log-entry.log-ACTION {
+  border-left-color: var(--primary);
+}
+
+.log-entry.log-INVALID {
+  border-left-color: var(--accent-warning);
+}
 
 /* Badge */
 .badge {
@@ -134,11 +195,20 @@ body {
   font-size: 0.75rem;
   font-weight: 600;
 }
-.badge-adm { background: rgba(59, 130, 246, 0.1); color: var(--primary); }
-.badge-usr { background: rgba(161, 161, 170, 0.1); color: var(--text-secondary); }
+
+.badge-adm {
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--primary);
+}
+
+.badge-usr {
+  background: rgba(161, 161, 170, 0.1);
+  color: var(--text-secondary);
+}
 
 /* Inputs */
-input, select {
+input,
+select {
   background: var(--bg-input);
   border: 1px solid var(--border);
   color: var(--text-primary);
@@ -146,7 +216,10 @@ input, select {
   border-radius: 0.4rem;
   outline: none;
 }
-input:focus { border-color: var(--primary); }
+
+input:focus {
+  border-color: var(--primary);
+}
 
 .modal-overlay {
   position: fixed;
