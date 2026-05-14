@@ -20,8 +20,8 @@ echo =======================================================
 call scripts\run_local_test.bat
 
 :: 2. Wait
-echo Waiting 5 seconds for infrastructure to settle...
-timeout /t 5 /nobreak > nul
+echo Waiting 25 seconds for MySQL and Mongo (Replica Set) to initialize...
+timeout /t 25 /nobreak > nul
 
 :: 3. Start Simulation
 call scripts\start_simulation.bat %PLAYER_ID%
