@@ -42,6 +42,10 @@ public class ApiClient {
             url.append("/");
         }
 
+        if (!url.toString().endsWith("android/")) {
+            url.append("android/");
+        }
+
         return url.toString();
     }
 
