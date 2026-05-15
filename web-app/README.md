@@ -1,3 +1,11 @@
+# Activate the virtual environment 
+# In root
+.\venv\Scripts\Activate.ps1
+
+```bash
+ source .venv/bin/activate
+```
+
 # Install
 
 ```bash
