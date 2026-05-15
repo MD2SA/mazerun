@@ -11,7 +11,8 @@ CREATE PROCEDURE sp_create_user(
     IN p_type ENUM('usr', 'adm'),
     IN p_email VARCHAR(50),
     IN p_birth DATE,
-    IN p_team INT
+    IN p_team INT,
+    IN p_password VARCHAR(255)
 )
 BEGIN
     -- Admins should not have a team
@@ -19,8 +20,8 @@ BEGIN
         SET p_team = NULL;
     END IF;
 
-    INSERT INTO user (name, phone, type, email, birth, team)
-    VALUES (p_name, p_phone, p_type, p_email, p_birth, p_team);
+    INSERT INTO user (name, phone, type, email, birth, team, password)
+    VALUES (p_name, p_phone, p_type, p_email, p_birth, p_team, p_password);
     SELECT 'User created successfully' AS message;
 END //
 
@@ -83,7 +84,7 @@ BEGIN
     END IF;
 END //
 
--- Get all users (Admin only logic should be in API, but this procedure exists)
+-- Get all users (password column excluded for security)
 DROP PROCEDURE IF EXISTS sp_get_all_users //
 CREATE PROCEDURE sp_get_all_users()
 BEGIN

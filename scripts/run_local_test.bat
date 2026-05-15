@@ -14,9 +14,9 @@ if /i "%reset_db%"=="y" (
 echo [1/2] Starting MONGO services...
 pushd mongo && docker-compose up -d --build && popd
 
-:: 2. Start MySQL (only DB + phpMyAdmin)
-echo [2/2] Starting MYSQL database...
-pushd mysql && docker-compose up -d mysql-db phpmyadmin && popd
+:: 2. Start MySQL (DB + phpMyAdmin + PHP API)
+echo [2/2] Starting MYSQL database and PHP API...
+pushd mysql && docker-compose up -d --build mysql-db phpmyadmin php && popd
 
 echo -------------------------------------------------------
 echo Infrastructure is running!

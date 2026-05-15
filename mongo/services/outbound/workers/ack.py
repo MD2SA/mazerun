@@ -8,6 +8,11 @@ class AckWorker(threading.Thread):
     def __init__(self, broker, port, db):
         super().__init__(daemon=True)
         self.db = db
+
+        from common.config_loader import load_config
+        config = load_config()
+        self.ack_topic = config.get("mqtt", {}).get("ack_topic", "persistence/ack")
+
         self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1)
         self.client.on_connect = self.on_connect
         self.client.on_message = self.on_message
@@ -16,8 +21,8 @@ class AckWorker(threading.Thread):
     def on_connect(self, client, userdata, flags, rc):
         if rc == 0:
             print("[AckWorker] Connected to MQTT")
-            client.subscribe("persistence/ack")
-            print("[AckWorker] Subscribed to persistence/ack")
+            client.subscribe(self.ack_topic)
+            print(f"[AckWorker] Subscribed to {self.ack_topic}")
 
     def on_message(self, client, userdata, msg):
         try:

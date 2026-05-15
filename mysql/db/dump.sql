@@ -39,6 +39,7 @@ CREATE TABLE `user` (
   `email` varchar(50) NOT NULL,
   `birth` date NOT NULL,
   `team` int DEFAULT NULL,
+  `password` varchar(255) NOT NULL DEFAULT '',
   PRIMARY KEY (`email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -49,7 +50,8 @@ CREATE TABLE `user` (
 
 LOCK TABLES `user` WRITE;
 /*!40000 ALTER TABLE `user` DISABLE KEYS */;
-INSERT INTO `user` VALUES ('System Admin','910000000','adm','admin@mazerun.io','1990-01-01',NULL);
+-- Default admin password: admin123 (bcrypt hashed)
+INSERT INTO `user` VALUES ('System Admin','910000000','adm','admin@mazerun.io','1990-01-01',NULL,'$2y$10$PUDw9.mCqIIVFulO5aRAse8vmcRBQdZMRKHxCdICKSiLU11U/ru.O');
 /*!40000 ALTER TABLE `user` ENABLE KEYS */;
 UNLOCK TABLES;
 

@@ -52,14 +52,14 @@ class MovementWorker(BaseWorker):
             doc_out["timestamp"] = str(doc_out["timestamp"])
 
         if is_valid:
-            self.mqtt_client.client.publish("processed/measure", json.dumps(doc_out))
+            self.mqtt_client.client.publish(f"{self.topic_prefix}/measure", json.dumps(doc_out))
             
             # --- Actuator Logic: Parity Check ---
             self._check_marsami_parity(destiny, player)
             # ----------------------
         else:
             doc_out["error"] = "Invalid room transition"
-            self.mqtt_client.client.publish("processed/invalid_measure", json.dumps(doc_out))
+            self.mqtt_client.client.publish(f"{self.topic_prefix}/invalid_measure", json.dumps(doc_out))
 
     def _check_marsami_parity(self, room_id, current_player):
         """
@@ -108,4 +108,4 @@ class MovementWorker(BaseWorker):
         }
         if "RoomOrigin" in doc: payload["from"] = doc["RoomOrigin"]
         if "RoomDestiny" in doc: payload["to"] = doc["RoomDestiny"]
-        self.mqtt_client.client.publish("processed/invalid_measure", json.dumps(payload))
+        self.mqtt_client.client.publish(f"{self.topic_prefix}/invalid_measure", json.dumps(payload))

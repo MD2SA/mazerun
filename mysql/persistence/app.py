@@ -27,14 +27,15 @@ class PersistenceApp:
         self.db_manager = MySQLConnection(mysql_config)
 
         # Initialize handlers
+        prefix = self.mqtt_config.get("internal_prefix", "processed")
         self.handlers = {
-            "processed/measure": MeasureHandler(self.db_manager),
-            "processed/invalid_measure": InvalidMeasureHandler(self.db_manager),
-            "processed/temperature": TemperatureHandler(self.db_manager),
-            "processed/sound": SoundHandler(self.db_manager),
-            "processed/sound_outlier": SoundOutlierHandler(self.db_manager),
-            "processed/message": MessageHandler(self.db_manager),
-            "processed/ocupation": OccupationHandler(self.db_manager),
+            f"{prefix}/measure": MeasureHandler(self.db_manager),
+            f"{prefix}/invalid_measure": InvalidMeasureHandler(self.db_manager),
+            f"{prefix}/temperature": TemperatureHandler(self.db_manager),
+            f"{prefix}/sound": SoundHandler(self.db_manager),
+            f"{prefix}/sound_outlier": SoundOutlierHandler(self.db_manager),
+            f"{prefix}/message": MessageHandler(self.db_manager),
+            f"{prefix}/ocupation": OccupationHandler(self.db_manager),
             "pisid_mazeact": ActionHandler(self.db_manager),
         }
 
