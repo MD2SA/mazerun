@@ -3,15 +3,15 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 header('Content-Type: application/json');
 
+require_once __DIR__ . '/auth_check.php';
+$auth = require_android_auth();
+
 $response = array('success' => false, 'message' => '', 'data' => null);
 
-// These come from Android (APP LEVEL)
-$username = $_REQUEST['username'] ?? '';
-$database = $_REQUEST['database'] ?? '';
+$database = $auth['db'] ?? $_REQUEST['database'] ?? '';
 
-// Validate only what you actually need
-if (empty($username) || empty($database)) {
-    $response['message'] = 'Missing username or database.';
+if (empty($database)) {
+    $response['message'] = 'Base de dados não especificada.';
     echo json_encode($response);
     exit;
 }

@@ -59,20 +59,21 @@ public class ApiClient {
         
         if (baseHttpUrl == null) {
             Log.e(TAG, "Invalid URL: " + baseUrl + endpoint);
-            return new Request.Builder().url("http://localhost/").build(); // Fallback to avoid crash
+            return new Request.Builder().url("http://localhost/").build();
         }
 
-        HttpUrl url = baseHttpUrl.newBuilder()
-                .addQueryParameter("database", session.getDatabase())
-                .addQueryParameter("username", session.getEmail())
-                .addQueryParameter("password", session.getPassword())
-                .build();
+        // Token-based authentication
+        String token = session.getJwtToken();
+        Log.d(TAG, "Request URL: " + baseHttpUrl.toString());
 
-        Log.d(TAG, "Request URL: " + url.toString());
+        Request.Builder requestBuilder = new Request.Builder()
+                .url(baseHttpUrl)
+                .get();
 
-        return new Request.Builder()
-                .url(url)
-                .get()
-                .build();
+        if (token != null && !token.isEmpty()) {
+            requestBuilder.addHeader("Authorization", "Bearer " + token);
+        }
+
+        return requestBuilder.build();
     }
 }

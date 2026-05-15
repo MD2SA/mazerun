@@ -3,14 +3,15 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 header('Content-Type: application/json');
 
+require_once __DIR__ . '/auth_check.php';
+$auth = require_android_auth();
+
 $response = array('success' => false, 'message' => '', 'data' => array());
 
-$username = $_REQUEST['username'] ?? '';
-$password = $_REQUEST['password'] ?? '';
-$database = $_REQUEST['database'] ?? '';
+$database = $auth['db'] ?? $_REQUEST['database'] ?? '';
 
-if (empty($username) || empty($password) || empty($database)) {
-    $response['message'] = 'Preencha todos os campos.';
+if (empty($database)) {
+    $response['message'] = 'Base de dados não especificada.';
     echo json_encode($response);
     exit;
 }
