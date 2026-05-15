@@ -13,7 +13,7 @@ import java.io.IOException;
 public class AuthRepository extends BaseRepository {
 
     public interface AuthCallback {
-        void onSuccess(String message);
+        void onSuccess(String message, String token);
         void onError(String error);
     }
 
@@ -52,7 +52,7 @@ public class AuthRepository extends BaseRepository {
                 ApiResponse<?> result = parseJson(responseBody, ApiResponse.class);
                 if (result != null) {
                     if (result.success) {
-                        callback.onSuccess(result.message);
+                        callback.onSuccess(result.message, result.token);
                     } else {
                         callback.onError(result.message != null ? result.message : "Login failed");
                     }

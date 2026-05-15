@@ -3,7 +3,9 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 header('Content-Type: application/json');
 
-$response = array('success' => false, 'message' => '');
+require_once __DIR__ . '/jwt.php';
+
+$response = array('success' => false, 'message' => '', 'token' => '');
 
 // Usamos $_REQUEST para aceitar tanto GET (browser) quanto POST (Android)
 $username = $_REQUEST['username'] ?? '';
@@ -16,22 +18,20 @@ if (empty($username) || empty($password) || empty($database)) {
     exit;
 }
 
-$host = 'mysql-db'; // Nome do serviço no docker-compose.yml
+$host = 'mysql-db';
 $db_user = 'root';
 $db_pass = 'root';
 
-// 1. Criar conexão
 $conn = new mysqli($host, $db_user, $db_pass, $database);
 
-// 2. Verificar conexão
 if ($conn->connect_error) {
     $response['message'] = "Erro de conexão MySQL: " . $conn->connect_error;
     echo json_encode($response);
     exit;
 }
 
-// 3. Consulta (Usando MySQLi preparada para evitar SQL Injection)
-$sql = "SELECT team FROM user WHERE email = ?";
+// 3. Consulta - Agora verificando a password
+$sql = "SELECT password, team, type FROM user WHERE email = ?";
 $stmt = $conn->prepare($sql);
 
 if ($stmt) {
@@ -41,9 +41,21 @@ if ($stmt) {
     $user = $result->fetch_assoc();
 
     if ($user) {
-        $response['success'] = true;
-        $response['IDGrupo'] = $user['team'];
-        $response['message'] = 'Login bem-sucedido.';
+        if (!empty($user['password']) && password_verify($password, $user['password'])) {
+            $token = jwt_encode([
+                'sub' => $username,
+                'type' => $user['type'],
+                'team' => $user['team'],
+                'db' => $database
+            ]);
+
+            $response['success'] = true;
+            $response['token'] = $token;
+            $response['IDGrupo'] = $user['team'];
+            $response['message'] = 'Login bem-sucedido.';
+        } else {
+            $response['message'] = 'Credenciais inválidas.';
+        }
     } else {
         $response['message'] = 'Utilizador não encontrado.';
     }

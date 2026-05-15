@@ -10,6 +10,9 @@ public class ApiResponse<T> {
     @SerializedName("message")
     public String message;
 
+    @SerializedName("token")
+    public String token;
+
     @SerializedName("data")
     public T data;
 }

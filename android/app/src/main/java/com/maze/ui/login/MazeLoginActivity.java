@@ -46,9 +46,9 @@ public class MazeLoginActivity extends AppCompatActivity {
         AuthRepository repo = new AuthRepository();
         repo.login(host, database, email, password, new AuthRepository.AuthCallback() {
             @Override
-            public void onSuccess(String message) {
+            public void onSuccess(String message, String token) {
                 SessionManager.getInstance(MazeLoginActivity.this)
-                        .saveSession(host, database, email, password);
+                        .saveSession(host, database, email, password, token);
 
                 runOnUiThread(() -> {
                     Toast.makeText(MazeLoginActivity.this, "Login Successful", Toast.LENGTH_SHORT).show();
