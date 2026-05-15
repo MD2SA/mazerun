@@ -56,9 +56,9 @@ class RoomWorker(BaseWorker):
             action_copy = action_payload.copy()
             action_copy["mongo_id"] = doc_out["mongo_id"]
             action_copy["collection"] = doc_out["collection"]
-            self.mqtt_client.client.publish("processed/message", json.dumps(action_copy))
+            self.mqtt_client.client.publish(f"{self.topic_prefix}/message", json.dumps(action_copy))
 
             doc_out["scored"] = True
 
         # Match persistence/main.py topic: processed/ocupation
-        self.mqtt_client.client.publish("processed/ocupation", json.dumps(doc_out))
+        self.mqtt_client.client.publish(f"{self.topic_prefix}/ocupation", json.dumps(doc_out))

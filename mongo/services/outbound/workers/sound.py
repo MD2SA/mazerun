@@ -72,9 +72,9 @@ class SoundWorker(BaseWorker):
 
         if is_outlier:
             doc_out["outlier_reason"] = outlier_reason
-            self._publish("processed/sound_outlier", None, doc_out)
+            self._publish(f"{self.topic_prefix}/sound_outlier", None, doc_out)
         else:
-            self._publish("processed/sound", None, doc_out)
+            self._publish(f"{self.topic_prefix}/sound", None, doc_out)
 
         # --- Actuator Logic ---
         if sound >= constants.ACTUATOR_SOUND_HIGH:

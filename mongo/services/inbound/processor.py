@@ -57,24 +57,29 @@ class InboundProcessor:
         # Update in-memory cache
         self._active_sessions[player_id] = session
 
-        # Upsert into MongoDB 'active_sessions' collection
-        try:
-            self.db["active_sessions"].update_one(
-                {"player_id": player_id},
-                {
-                    "$set": {
-                        "simulation_id": simulation_id,
-                        "registered_at": datetime.now(timezone.utc),
-                    }
-                },
-                upsert=True,
-            )
-            print(
-                f"[Inbound] ✔ Active session stored in MongoDB: "
-                f"player_id={player_id} → simulation_id={simulation_id}"
-            )
-        except Exception as e:
-            print(f"[Inbound ERROR] Storing active session in MongoDB: {e}")
+        # Upsert into MongoDB 'active_sessions' collection with retries
+        import time
+        for i in range(5):
+            try:
+                self.db["active_sessions"].update_one(
+                    {"player_id": player_id},
+                    {
+                        "$set": {
+                            "simulation_id": simulation_id,
+                            "registered_at": datetime.now(timezone.utc),
+                        }
+                    },
+                    upsert=True,
+                )
+                print(
+                    f"[Inbound] ✔ Active session stored in MongoDB: "
+                    f"player_id={player_id} → simulation_id={simulation_id}"
+                )
+                return True
+            except Exception as e:
+                print(f"[Inbound WARNING] Storing active session (Attempt {i+1}/5): {e}")
+                time.sleep(2)
+        return False
 
     def _get_session_for_player(self, player_id):
         """Returns the active session dict for a player, or None."""

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
+import { tokenStore } from './services/api';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users as UsersIcon, History, PlayCircle, LogOut,
@@ -115,14 +116,17 @@ const App = () => {
     }
   }, [user]);
 
-  const handleLogin = (data) => {
-    setUser(data);
+  const handleLogin = (data, token) => {
+    // Set token first so subsequent requests from newly mounted components have it
+    if (token) tokenStore.set(token);
     localStorage.setItem('user', JSON.stringify(data));
+    setUser(data);
   };
 
   const handleLogout = () => {
     setUser(null);
     localStorage.removeItem('user');
+    tokenStore.remove();
   };
 
   if (!user) return <Login onLogin={handleLogin} theme={theme} toggleTheme={toggleTheme} />;

@@ -1,7 +1,10 @@
 team_id: 25
+# Internal topics for isolation on public brokers
 mqtt:
   broker: "broker.hivemq.com"
   port: 1883
+  internal_prefix: "pisid/25/processed"
+  ack_topic: "pisid/25/persistence/ack"
 
 mysql:
   consulting:

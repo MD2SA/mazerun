@@ -8,6 +8,9 @@ mqtt:
     - pisid_mazetemp_25
     - pisid_mazesound_25
     - pisid_mazeact
+  # Internal topics for isolation on public brokers
+  internal_prefix: "pisid/25/processed"
+  ack_topic: "pisid/25/persistence/ack"
 
 mongo:
   uri: "mongodb://localhost:27017"

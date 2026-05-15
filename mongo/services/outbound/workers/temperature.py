@@ -41,7 +41,7 @@ class TemperatureWorker(BaseWorker):
             current_time = pd.to_datetime(timestamp)
             last_alert = self.last_alert_time.get(player)
             if not last_alert or (current_time - last_alert).total_seconds() > self.delta_t_seconds:
-                self.mqtt_client.client.publish("processed/message", json.dumps({
+                self.mqtt_client.client.publish(f"{self.topic_prefix}/message", json.dumps({
                     "mongo_id": doc_out["mongo_id"],
                     "collection": doc_out["collection"],
                     "player": player,
@@ -56,17 +56,17 @@ class TemperatureWorker(BaseWorker):
         # Using thresholds from constants (assuming ACTUATOR_TEMP_HIGH and ACTUATOR_TEMP_LOW exist)
         if temp >= constants.ACTUATOR_TEMP_HIGH:
             print(f"[TemperatureWorker] High temp ({temp}). Turning ON AC for Player {player}")
-            self.actuator.set_ac(player, 1)
+            self.actuator.ac_on(player)
         elif temp <= constants.ACTUATOR_TEMP_LOW:
             print(f"[TemperatureWorker] Low temp ({temp}). Turning OFF AC for Player {player}")
-            self.actuator.set_ac(player, 0)
+            self.actuator.ac_off(player)
 
         # 3. Emergency Safety: Close all doors if temperature is critical
         if hasattr(constants, 'TEMP_SAFETY_LIMIT') and temp >= constants.TEMP_SAFETY_LIMIT:
             print(f"[TemperatureWorker] CRITICAL temp ({temp}). Closing all doors!")
             self.actuator.close_all_doors(player)
 
-        self.mqtt_client.client.publish("processed/temperature", json.dumps(doc_out))
+        self.mqtt_client.client.publish(f"{self.topic_prefix}/temperature", json.dumps(doc_out))
 
     def _publish_error(self, topic, doc, reason):
         payload = {"_id": str(doc.get("_id")), "error": reason}

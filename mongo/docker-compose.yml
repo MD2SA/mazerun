@@ -39,8 +39,13 @@ services:
       - mongo-replica-2
     entrypoint: >
       bash -c "
-        echo 'Waiting for nodes...' &&
-        sleep 10 &&
+        echo 'Waiting for nodes to start...'
+        until mongosh --host mongo-db:27017 --eval 'db.runCommand({ping:1})' &>/dev/null; do
+          echo 'Mongo DB node not ready, retrying in 2s...'
+          sleep 2
+        done
+        
+        echo 'Initiating Replica Set...'
         mongosh --host mongo-db:27017 --eval '
           try {
             rs.initiate({
@@ -51,11 +56,18 @@ services:
                 {_id: 2, host: \"mongo-replica-2:27017\", priority: 1}
               ]
             });
-            print(\"Replica Set initialized!\");
+            print(\"Replica Set initiation triggered\");
           } catch(e) {
             print(\"Already initialized or error: \" + e.message);
           }
         '
+        
+        echo 'Waiting for primary election...'
+        until mongosh --host mongo-db:27017 --eval 'db.isMaster().ismaster' | grep 'true' &>/dev/null; do
+          echo 'Still electing primary...'
+          sleep 2
+        done
+        echo 'MongoDB Replica Set is READY!'
       "
 
   # A nossa Aplicação Python

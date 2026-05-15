@@ -11,6 +11,11 @@ class BaseWorker(threading.Thread):
         self.collection_name = collection_name
         self.collection = db[collection_name]
 
+        # Isolation topics
+        from common.config_loader import load_config
+        config = load_config()
+        self.topic_prefix = config.get("mqtt", {}).get("internal_prefix", "processed")
+
     def run(self):
         while True:
             try:
