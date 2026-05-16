@@ -42,10 +42,11 @@ class TemperatureWorker(BaseWorker):
             last_alert = self.last_alert_time.get(player)
             if not last_alert or (current_time - last_alert).total_seconds() > self.delta_t_seconds:
                 self.mqtt_client.client.publish(f"{self.topic_prefix}/message", json.dumps({
-                    "mongo_id": doc_out["mongo_id"],
+                    "mongo_id": f"{doc_out['mongo_id']}_alert",
                     "collection": doc_out["collection"],
                     "player": player,
                     "game": doc.get("game", 1),
+                    "simulation_id": doc_out["simulation_id"],
                     "value": temp,
                     "alert": f"High temperature detected ({temp})",
                     "timestamp": doc_out["timestamp"]
@@ -57,9 +58,38 @@ class TemperatureWorker(BaseWorker):
         if temp >= constants.ACTUATOR_TEMP_HIGH:
             print(f"[TemperatureWorker] High temp ({temp}). Turning ON AC for Player {player}")
             self.actuator.ac_on(player)
+
+            # Send System Alert for high temp if above threshold
+            self.mqtt_client.client.publish(f"{self.topic_prefix}/message", json.dumps({
+                "mongo_id": f"{doc_out['mongo_id']}_high_alert",
+                "collection": doc_out["collection"],
+                "player": player,
+                "game": doc.get("game", 1),
+                "simulation_id": doc_out["simulation_id"],
+                "sensor": "temperature",
+                "value": temp,
+                "alertType": "HIGH_TEMP",
+                "alert": f"High temperature detected ({temp}°C). AC ON.",
+                "timestamp": doc_out["timestamp"]
+            }))
+
         elif temp <= constants.ACTUATOR_TEMP_LOW:
             print(f"[TemperatureWorker] Low temp ({temp}). Turning OFF AC for Player {player}")
             self.actuator.ac_off(player)
+
+            # Send System Alert for low temp
+            self.mqtt_client.client.publish(f"{self.topic_prefix}/message", json.dumps({
+                "mongo_id": f"{doc_out['mongo_id']}_low_alert",
+                "collection": doc_out["collection"],
+                "player": player,
+                "game": doc.get("game", 1),
+                "simulation_id": doc_out["simulation_id"],
+                "sensor": "temperature",
+                "value": temp,
+                "alertType": "LOW_TEMP",
+                "alert": f"Low temperature detected ({temp}°C). AC OFF.",
+                "timestamp": doc_out["timestamp"]
+            }))
 
         # 3. Emergency Safety: Close all doors if temperature is critical
         if hasattr(constants, 'TEMP_SAFETY_LIMIT') and temp >= constants.TEMP_SAFETY_LIMIT:

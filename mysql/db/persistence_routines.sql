@@ -99,18 +99,18 @@ BEGIN
     SELECT 1;
 END //
 
-DROP PROCEDURE IF EXISTS sp_insert_message //
-CREATE PROCEDURE sp_insert_message(
-    IN p_time TIMESTAMP, IN p_sensor VARCHAR(10), IN p_value DECIMAL(10,2), 
-    IN p_alertType VARCHAR(50), IN p_description VARCHAR(100), IN p_simulation_id INT,
+DROP PROCEDURE IF EXISTS sp_insert_alert //
+CREATE PROCEDURE sp_insert_alert(
+    IN p_time TIMESTAMP, IN p_sensor ENUM('1','2'), IN p_value DECIMAL(10,2),
+    IN p_alertType ENUM('SCORE','HIGH_TEMP','LOW_TEMP','HIGH_SOUND'), IN p_description VARCHAR(100), IN p_simulation_id INT,
     IN p_mongo_id VARCHAR(50)
 )
 BEGIN
-    -- Messages are often derived events, but we still use mongo_id for idempotency if provided
+    -- Alerts are often derived events, but we still use mongo_id for idempotency if provided
     IF p_mongo_id IS NOT NULL AND EXISTS (SELECT 1 FROM processed_event WHERE mongo_id = p_mongo_id) THEN
         BEGIN END;
     ELSE
-        INSERT INTO message (time, room, sensor, reading, alertType, msg, insertTime, simulation_id) 
+        INSERT INTO alert (time, room, sensor, reading, alertType, msg, insertTime, simulation_id)
         VALUES (p_time, 0, p_sensor, p_value, p_alertType, p_description, NOW(), p_simulation_id);
         
         IF p_mongo_id IS NOT NULL THEN

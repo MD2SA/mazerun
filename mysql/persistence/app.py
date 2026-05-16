@@ -8,7 +8,7 @@ from common.config_loader import load_config
 from common.mysql_connection import MySQLConnection
 from handlers.data_handlers import (
     MeasureHandler, InvalidMeasureHandler, TemperatureHandler,
-    SoundHandler, SoundOutlierHandler, MessageHandler, OccupationHandler,
+    SoundHandler, SoundOutlierHandler, AlertHandler, OccupationHandler,
     ActionHandler
 )
 
@@ -34,7 +34,7 @@ class PersistenceApp:
             f"{prefix}/temperature": TemperatureHandler(self.db_manager),
             f"{prefix}/sound": SoundHandler(self.db_manager),
             f"{prefix}/sound_outlier": SoundOutlierHandler(self.db_manager),
-            f"{prefix}/message": MessageHandler(self.db_manager),
+            f"{prefix}/message": AlertHandler(self.db_manager),
             f"{prefix}/ocupation": OccupationHandler(self.db_manager),
             "pisid_mazeact": ActionHandler(self.db_manager),
         }
