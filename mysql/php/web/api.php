@@ -229,7 +229,7 @@ try {
             $stats = [
                 "total_sims"     => $conn->query("SELECT COUNT(*) FROM simulation $where")->fetch_row()[0],
                 "total_measures" => $conn->query("SELECT COUNT(*) FROM measure m JOIN simulation s ON m.simulation_id = s.id $where")->fetch_row()[0],
-                "total_alerts"   => $conn->query("SELECT COUNT(*) FROM message m JOIN simulation s ON m.simulation_id = s.id $where")->fetch_row()[0],
+                "total_alerts"   => $conn->query("SELECT COUNT(*) FROM alert m JOIN simulation s ON m.simulation_id = s.id $where")->fetch_row()[0],
                 "avg_temp"       => round($conn->query("SELECT AVG(temperature) FROM temperature t JOIN simulation s ON t.simulation_id = s.id $where")->fetch_row()[0], 2),
                 "avg_sound"      => round($conn->query("SELECT AVG(sound) FROM sound t JOIN simulation s ON t.simulation_id = s.id $where")->fetch_row()[0], 2),
                 "total_marsamis" => $conn->query("SELECT SUM(oddMarsamis + evenMarsamis) FROM ocupation o JOIN simulation s ON o.id = s.id $where")->fetch_row()[0] ?? 0
@@ -251,7 +251,7 @@ try {
             $sim_id_param = (int)($_GET['simulation_id'] ?? $data['simulation_id'] ?? 0);
             $limit        = (int)($_GET['limit'] ?? $data['limit'] ?? 100);
             $where        = $sim_id_param ? "WHERE simulation_id = $sim_id_param" : "";
-            $sql          = "(SELECT time, 'ALERT' as type, msg as detail FROM message $where) UNION ALL (SELECT time, 'ACTION' as type, CONCAT(action_type, ' -> ', target) as detail FROM action $where) UNION ALL (SELECT time, 'INVALID' as type, reason as detail FROM invalid_measure $where) UNION ALL (SELECT time, 'OUTLIER' as type, reason as detail FROM sound_outlier $where) ORDER BY time DESC LIMIT $limit";
+            $sql          = "(SELECT time, 'ALERT' as type, msg as detail FROM alert $where) UNION ALL (SELECT time, 'ACTION' as type, CONCAT(action_type, ' -> ', target) as detail FROM action $where) UNION ALL (SELECT time, 'INVALID' as type, reason as detail FROM invalid_measure $where) UNION ALL (SELECT time, 'OUTLIER' as type, reason as detail FROM sound_outlier $where) ORDER BY time DESC LIMIT $limit";
             $res          = $conn->query($sql);
             $response     = ["success" => true, "data" => $res->fetch_all(MYSQLI_ASSOC)];
             break;

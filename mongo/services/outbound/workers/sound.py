@@ -78,7 +78,22 @@ class SoundWorker(BaseWorker):
 
         # --- Actuator Logic ---
         if sound >= constants.ACTUATOR_SOUND_HIGH:
+            print(f"[SoundWorker] High sound ({sound}). Closing all doors for Player {player}")
             self.actuator.close_all_doors(player)
+
+            # Send System Alert
+            self.mqtt_client.client.publish(f"{self.topic_prefix}/message", json.dumps({
+                "mongo_id": f"{doc_out['mongo_id']}_alert",
+                "collection": doc_out["collection"],
+                "player": player,
+                "game": doc.get("game", 1),
+                "simulation_id": doc_out["simulation_id"],
+                "sensor": "sound",
+                "value": sound,
+                "alertType": "HIGH_SOUND",
+                "alert": f"High sound level detected ({sound} dB)",
+                "timestamp": doc_out["timestamp"]
+            }))
         # ----------------------
 
     def _publish(self, topic, raw_doc, payload):

@@ -54,8 +54,9 @@ class RoomWorker(BaseWorker):
             self.mqtt_client.client.publish("actuator/score", json.dumps(action_payload))
             
             action_copy = action_payload.copy()
-            action_copy["mongo_id"] = doc_out["mongo_id"]
+            action_copy["mongo_id"] = f"{doc_out['mongo_id']}_alert"
             action_copy["collection"] = doc_out["collection"]
+            action_copy["simulation_id"] = sim_id
             self.mqtt_client.client.publish(f"{self.topic_prefix}/message", json.dumps(action_copy))
 
             doc_out["scored"] = True

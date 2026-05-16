@@ -31,7 +31,7 @@ if ($conn->connect_error) {
 }
 
 // 3. Consulta
-$sql = "SELECT id, alertType, time, msg, reading, sensor FROM message ORDER BY id DESC";
+$sql = "SELECT id, alertType, time, msg, reading, sensor FROM alert ORDER BY id DESC";
 $result = $conn->query($sql);
 
 if ($result) {

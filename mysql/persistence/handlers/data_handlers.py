@@ -38,21 +38,32 @@ class SoundOutlierHandler(BaseHandler):
         ))
         if res == 1: self.send_ack(client, payload)
 
-class MessageHandler(BaseHandler):
+class AlertHandler(BaseHandler):
     def handle(self, client, payload, dt, sim_id):
-        raw_sensor = payload.get("sensor", "temperature").lower()
-        sensor = "2" if raw_sensor == "sound" else "1"
+        # 1. Map Sensor
+        raw_sensor = str(payload.get("sensor", "temperature")).lower()
+        if "sound" in raw_sensor:
+            sensor = "2"
+        else:
+            sensor = "1"
 
+        # 2. Determine Alert Type and Value
         if payload.get("command") == "score":
             value = payload.get("room", 0)
             alert_type = "SCORE"
-            alert = payload.get("reason", "")
+            alert = payload.get("reason", "Threshold reached")
         else:
             value = payload.get("value", 0)
             alert_type = payload.get("alertType", "HIGH_TEMP")
-            alert = payload.get("alert", "")
+            alert = payload.get("alert", "Threshold exceeded")
 
-        res = self.db_manager.call_sp("sp_insert_message", (
+        # 3. Validate against ENUMs (Program definitions)
+        allowed_types = ["SCORE", "HIGH_TEMP", "LOW_TEMP", "HIGH_SOUND"]
+        if alert_type not in allowed_types:
+            print(f"[Handler WARNING] Unknown alertType: {alert_type}. Defaulting to HIGH_TEMP")
+            alert_type = "HIGH_TEMP"
+
+        res = self.db_manager.call_sp("sp_insert_alert", (
             dt, sensor, value, alert_type, alert, sim_id, payload.get("mongo_id")
         ))
         if res == 1: self.send_ack(client, payload)

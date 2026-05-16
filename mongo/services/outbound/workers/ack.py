@@ -36,17 +36,22 @@ class AckWorker(threading.Thread):
             print(f"[AckWorker ERROR] {e}")
 
     def mark_as_processed(self, mongo_id, collection_name=None):
+        # Handle derived IDs (like alerts) by stripping the suffix
+        source_id = mongo_id
+        if isinstance(mongo_id, str) and "_" in mongo_id:
+            source_id = mongo_id.split("_")[0]
+
         try:
-            oid = ObjectId(mongo_id)
+            oid = ObjectId(source_id)
         except:
-            oid = mongo_id
+            oid = source_id
 
         if collection_name:
             self.db[collection_name].update_one(
                 {"_id": oid},
                 {"$set": {"process_status": "processed", "processed_at": datetime.now(timezone.utc)}}
             )
-            print(f"[AckWorker] Document {mongo_id} in {collection_name} marked as PROCESSED")
+            print(f"[AckWorker] Document {oid} in {collection_name} marked as PROCESSED (from {mongo_id})")
             return
 
         # Fallback search

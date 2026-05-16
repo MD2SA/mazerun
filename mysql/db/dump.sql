@@ -116,35 +116,35 @@ LOCK TABLES `measure` WRITE;
 UNLOCK TABLES;
 
 --
--- Table structure for table `message`
+-- Table structure for table `alert`
 --
 
-DROP TABLE IF EXISTS `message`;
+DROP TABLE IF EXISTS `alert`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `message` (
+CREATE TABLE `alert` (
   `id` int NOT NULL AUTO_INCREMENT,
   `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `room` int NOT NULL,
-  `sensor` varchar(10) NOT NULL,
+  `sensor` enum('1','2') NOT NULL COMMENT '1: Temperature, 2: Sound',
   `reading` decimal(10,2) NOT NULL,
-  `alertType` varchar(50) NOT NULL,
+  `alertType` enum('SCORE','HIGH_TEMP','LOW_TEMP','HIGH_SOUND') NOT NULL,
   `msg` varchar(100) NOT NULL,
   `insertTime` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `simulation_id` int NOT NULL,
   PRIMARY KEY (`id`),
-  KEY `fk_message_simulation` (`simulation_id`),
-  CONSTRAINT `fk_message_simulation` FOREIGN KEY (`simulation_id`) REFERENCES `simulation` (`id`) ON DELETE CASCADE
+  KEY `fk_alert_simulation` (`simulation_id`),
+  CONSTRAINT `fk_alert_simulation` FOREIGN KEY (`simulation_id`) REFERENCES `simulation` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `message`
+-- Dumping data for table `alert`
 --
 
-LOCK TABLES `message` WRITE;
-/*!40000 ALTER TABLE `message` DISABLE KEYS */;
-/*!40000 ALTER TABLE `message` ENABLE KEYS */;
+LOCK TABLES `alert` WRITE;
+/*!40000 ALTER TABLE `alert` DISABLE KEYS */;
+/*!40000 ALTER TABLE `alert` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
