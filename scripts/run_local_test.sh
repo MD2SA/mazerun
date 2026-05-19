@@ -4,7 +4,7 @@
 echo "=== STARTING MAZERUN INFRASTRUCTURE (MONGO + MYSQL) ==="
 
 # Ask for database reset
-read -p "Do you want to RESET the databases? (This will DELETE ALL DATA and re-run SQL scripts) [y/N]: " reset_db
+read -p "Do you want to RESET the databases? (This will DELETE ALL DATA and re-run SQL scripts) [Y/N]: " reset_db
 
 if [[ "$reset_db" =~ ^[Yy]$ ]]; then
     echo "[Clean] Stopping services and removing volumes..."
