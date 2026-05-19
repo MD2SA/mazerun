@@ -2,6 +2,8 @@ package com.maze.ui.temperature;
 
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -30,6 +32,15 @@ public class MazeTemperatureFragment extends Fragment {
     private TemperatureRepository repository;
     private SessionManager session;
 
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private final Runnable refreshRunnable = new Runnable() {
+        @Override
+        public void run() {
+            fetchData();
+            handler.postDelayed(this, 5000); // 5 seconds
+        }
+    };
+
     public MazeTemperatureFragment() {
         // Required empty public constructor
     }
@@ -54,6 +65,18 @@ public class MazeTemperatureFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
         setupChart();
         fetchData();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        handler.post(refreshRunnable);
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        handler.removeCallbacks(refreshRunnable);
     }
 
     private void setupChart() {
