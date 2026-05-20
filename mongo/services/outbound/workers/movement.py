@@ -1,5 +1,6 @@
 import json
 from .base import BaseWorker
+from common.simulation_config import SimulationConfigCache
 from services.outbound.actuators import ActuatorService
 
 class MovementWorker(BaseWorker):
@@ -9,6 +10,7 @@ class MovementWorker(BaseWorker):
         self.actuator = ActuatorService(mqtt_client)
         # Tracking triggers per player and room to respect the 3-limit
         self.trigger_counts = {} 
+        self.config_cache = SimulationConfigCache(db)
 
     def process(self, doc):
         # Raw fields: Player, RoomOrigin, RoomDestiny, Marsami
@@ -28,6 +30,13 @@ class MovementWorker(BaseWorker):
             marsami = int(doc["Marsami"])
         except ValueError:
             self._publish_invalid(doc, "Invalid types, expected integers")
+            return
+
+        bounds_error = self._validate_simulation_bounds(
+            doc.get("simulation_id"), player, origin, destiny, marsami
+        )
+        if bounds_error:
+            self._publish_invalid(doc, bounds_error)
             return
 
         # 3. Validate logical move against MySQL
@@ -94,7 +103,7 @@ class MovementWorker(BaseWorker):
             print(f"[Actuator] Parity detected in room {room_id} for Player {current_player}. Sequence: Close -> Score -> Open")
             
             # Sequence to ensure balance doesn't break during scoring
-            self.actuator.close_door(current_player)
+            self.actuator.close_all_doors(current_player)
             self.actuator.send_score(current_player, room_id)
             self.actuator.open_all_doors(current_player)
             
@@ -104,8 +113,33 @@ class MovementWorker(BaseWorker):
         payload = {
             "mongo_id": str(doc["_id"]),
             "collection": "moves",
+            "simulation_id": doc.get("simulation_id"),
             "error": reason
         }
         if "RoomOrigin" in doc: payload["from"] = doc["RoomOrigin"]
         if "RoomDestiny" in doc: payload["to"] = doc["RoomDestiny"]
+        if "Marsami" in doc: payload["marsami"] = doc["Marsami"]
         self.mqtt_client.client.publish(f"{self.topic_prefix}/invalid_measure", json.dumps(payload))
+
+    def _validate_simulation_bounds(self, simulation_id, player, origin, destiny, marsami):
+        config = self.config_cache.get(simulation_id)
+        if not config:
+            return None
+
+        try:
+            number_players = int(config["numberplayers"])
+            number_rooms = int(config["numberrooms"])
+            number_marsamis = int(config["numbermarsamis"])
+        except (KeyError, TypeError, ValueError):
+            return None
+
+        if player < 1 or player > number_players:
+            return f"Player out of range: {player}"
+        if marsami < 1 or marsami > number_marsamis:
+            return f"Marsami out of range: {marsami}"
+        if origin < 0 or origin > number_rooms:
+            return f"Origin room out of range: {origin}"
+        if destiny < 1 or destiny > number_rooms:
+            return f"Destiny room out of range: {destiny}"
+
+        return None

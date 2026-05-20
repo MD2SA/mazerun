@@ -3,6 +3,7 @@ import pandas as pd
 from datetime import timedelta
 from .base import BaseWorker
 from common import constants
+from common.simulation_config import SimulationConfigCache
 from services.outbound.actuators import ActuatorService
 
 class SoundWorker(BaseWorker):
@@ -10,6 +11,7 @@ class SoundWorker(BaseWorker):
         super().__init__(queue, db, mqtt_client, "sound")
         self.player_state = {}
         self.actuator = ActuatorService(mqtt_client)
+        self.config_cache = SimulationConfigCache(db)
 
     def process(self, doc):
         if "Sound" not in doc or "Player" not in doc:
@@ -39,8 +41,18 @@ class SoundWorker(BaseWorker):
 
         is_outlier = False
         outlier_reason = ""
+        normal_noise, noise_tolerance = self._noise_limits_for(doc.get("simulation_id"))
 
         # Outlier Detection Rules
+        if normal_noise is not None and noise_tolerance is not None:
+            noise_delta = abs(sound - normal_noise)
+            if noise_delta > noise_tolerance:
+                is_outlier = True
+                outlier_reason = (
+                    f"Noise tolerance outlier: |{sound} - {normal_noise}| > "
+                    f"{noise_tolerance}"
+                )
+
         if movements > 0:
             ratio = sound / movements
             if ratio > constants.SOUND_RATIO_MAX or ratio < constants.SOUND_RATIO_MIN:
@@ -77,8 +89,15 @@ class SoundWorker(BaseWorker):
             self._publish(f"{self.topic_prefix}/sound", None, doc_out)
 
         # --- Actuator Logic ---
-        if sound >= constants.ACTUATOR_SOUND_HIGH:
-            print(f"[SoundWorker] High sound ({sound}). Closing all doors for Player {player}")
+        # Trigger when approaching the limit (80% of tolerance) to avoid losing the game
+        action_threshold = (
+            normal_noise + (noise_tolerance * 0.8)
+            if normal_noise is not None and noise_tolerance is not None
+            else constants.ACTUATOR_SOUND_HIGH
+        )
+        
+        if sound >= action_threshold:
+            print(f"[SoundWorker] Sound approaching limit ({sound}). Closing all doors for Player {player}")
             self.actuator.close_all_doors(player)
 
             # Send System Alert
@@ -94,6 +113,11 @@ class SoundWorker(BaseWorker):
                 "alert": f"High sound level detected ({sound} dB)",
                 "timestamp": doc_out["timestamp"]
             }))
+        else:
+            baseline = normal_noise if normal_noise is not None else (constants.ACTUATOR_SOUND_HIGH - 10)
+            if sound <= baseline:
+                print(f"[SoundWorker] Sound normalized ({sound}). Opening all doors for Player {player}")
+                self.actuator.open_all_doors(player)
         # ----------------------
 
     def _publish(self, topic, raw_doc, payload):
@@ -101,3 +125,13 @@ class SoundWorker(BaseWorker):
             payload["mongo_id"] = str(raw_doc["_id"])
             payload["collection"] = "sound"
         self.mqtt_client.client.publish(topic, json.dumps(payload))
+
+    def _noise_limits_for(self, simulation_id):
+        config = self.config_cache.get(simulation_id)
+        if not config:
+            return None, None
+
+        try:
+            return float(config["normalnoise"]), float(config["noisevartoleration"])
+        except (KeyError, TypeError, ValueError):
+            return None, None

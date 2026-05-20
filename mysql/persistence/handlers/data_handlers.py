@@ -97,6 +97,12 @@ class ActionHandler(BaseHandler):
             state = payload.get("State", 0)
             target = "Air Conditioner"
             value = state # 1 for ON, 0 for OFF
+        elif action_type == "AcOn":
+            target = "Air Conditioner"
+            value = 1
+        elif action_type == "AcOff":
+            target = "Air Conditioner"
+            value = 0
         elif action_type in ["CloseAllDoor", "OpenAllDoor"]:
             target = "All Corridors"
             value = 1 if "Open" in action_type else 0
