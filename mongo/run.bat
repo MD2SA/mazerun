@@ -1,22 +1,14 @@
 @echo off
-REM Script para iniciar o serviço Python do Mongo localmente no Windows
+REM Script unificado: Faz o deploy de todos os serviços Mongo (Replica Set e App Python) via Docker
 
-echo Starting Mongo Microservice...
 cd /d "%~dp0"
 
-REM Criar ambiente virtual se não existir
-IF NOT EXIST "venv\" (
-    echo Creating virtual environment...
-    python -m venv venv
-)
+echo =========================================
+echo  MAZERUN - INICIAR MONGODB (DOCKER)
+echo =========================================
+echo A parar containers antigos (se existirem)...
+docker compose down
 
-REM Ativar ambiente virtual e instalar dependências
-echo Activating virtual environment...
-call venv\Scripts\activate.bat
-
-echo Installing dependencies...
-pip install -r requirements.txt
-
-REM Executar o serviço
-echo Running main.py...
-python main.py
+echo A iniciar o Cluster MongoDB e a App Python...
+REM O Docker Compose levanta o replica set, corre o mongo-setup e liga o mongo-app
+docker compose up --build

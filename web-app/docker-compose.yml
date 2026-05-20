@@ -3,5 +3,8 @@ services:
     build: .
     container_name: mazerun-web-app
     ports:
-      - "80:80"
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
     restart: unless-stopped

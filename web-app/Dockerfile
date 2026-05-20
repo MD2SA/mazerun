@@ -1,9 +1,8 @@
-# Estágio 1: Build (Compilar a app Vite)
-FROM node:20-alpine AS builder
+FROM node:20-alpine
 
 WORKDIR /app
 
-# Instalar pnpm (usado no vosso projeto)
+# Instalar pnpm
 RUN npm install -g pnpm
 
 # Copiar os ficheiros de dependências
@@ -12,19 +11,12 @@ COPY package.json pnpm-lock.yaml ./
 # Instalar as dependências
 RUN pnpm install
 
-# Copiar o resto do código da app e fazer o build para produção
+# Copiar o resto do código da app
 COPY . .
-RUN pnpm run build
 
-# Estágio 2: Produção (Servir a app com Nginx)
-FROM nginx:alpine
+# Expor a porta do servidor de desenvolvimento do Vite
+EXPOSE 5173
 
-# Limpar o Nginx por defeito
-RUN rm -rf /usr/share/nginx/html/*
-
-# Copiar os ficheiros estáticos do estágio de build (Vite gera a pasta 'dist')
-COPY --from=builder /app/dist /usr/share/nginx/html
-
-EXPOSE 80
-
-CMD ["nginx", "-g", "daemon off;"]
+# Correr o Vite em modo desenvolvimento. 
+# O --host é necessário no Docker para que a app fique acessível fora do contentor
+CMD ["pnpm", "run", "dev", "--host"]

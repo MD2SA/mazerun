@@ -1,19 +1,14 @@
 #!/bin/bash
-# Script para iniciar o serviço Python do Mongo localmente
+# Script unificado: Faz o deploy de todos os serviços Mongo (Replica Set e App Python) via Docker
 
-echo "Starting Mongo Microservice..."
 cd "$(dirname "$0")" || exit
 
-# Criar ambiente virtual se não existir
-if [ ! -d "venv" ]; then
-    echo "Creating virtual environment..."
-    python3 -m venv venv
-fi
+echo "========================================="
+echo " MAZERUN - INICIAR MONGODB (DOCKER)"
+echo "========================================="
+echo "A parar containers antigos (se existirem)..."
+docker compose down
 
-# Ativar ambiente virtual e instalar dependências
-source venv/bin/activate
-pip install -r requirements.txt
-
-# Executar o serviço
-echo "Running main.py..."
-python main.py
+echo "A iniciar o Cluster MongoDB e a App Python..."
+# O Docker Compose levanta o replica set, corre o mongo-setup e liga o mongo-app
+docker compose up --build
