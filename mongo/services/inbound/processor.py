@@ -16,11 +16,12 @@ class InboundProcessor:
     session only applies to documents inserted after the game/start event.
     """
 
-    def __init__(self, db, mqtt_publisher=None, team_id=25):
+    def __init__(self, db, mqtt_publisher=None, team_id=25, simulation_configs=None):
         self.db = db
         # mqtt_publisher must expose .publish(topic, payload) for the ACK
         self.mqtt_publisher = mqtt_publisher
         self.team_id = team_id
+        self.simulation_configs = simulation_configs
 
         # In-memory cache: player_id (int) → {"player_id": …, "simulation_id": …}
         self._active_sessions: dict = {}
@@ -36,7 +37,7 @@ class InboundProcessor:
         """Reload active session state from MongoDB on process restart."""
         try:
             for doc in self.db["active_sessions"].find():
-                pid = doc.get("player_id")
+                pid = doc.get("_id")  # Using _id as the primary identifier
                 if pid is not None:
                     self._active_sessions[pid] = {
                         "player_id": pid,
@@ -62,7 +63,7 @@ class InboundProcessor:
         for i in range(5):
             try:
                 self.db["active_sessions"].update_one(
-                    {"player_id": player_id},
+                    {"_id": player_id},  # player_id is now the _id
                     {
                         "$set": {
                             "simulation_id": simulation_id,
@@ -141,6 +142,18 @@ class InboundProcessor:
             f"[Inbound] game/start received — player_id={player_id}, "
             f"simulation_id={simulation_id}"
         )
+
+        if self.simulation_configs:
+            config = self.simulation_configs.get_or_fetch(simulation_id)
+            if config:
+                print(
+                    f"[Inbound] Loaded simulation config for simulation_id={simulation_id}"
+                )
+            else:
+                print(
+                    f"[Inbound WARNING] Simulation config unavailable for "
+                    f"simulation_id={simulation_id}. Workers will use defaults."
+                )
 
         # Store session in MongoDB + in-memory
         self._register_session(player_id, simulation_id)
@@ -227,6 +240,7 @@ class InboundProcessor:
         destiny = raw.get("RoomDestiny")
         marsami_id = raw.get("Marsami")
 
+
         # Isolation key: room + simulation
         if destiny is not None:
             self.db["rooms"].update_one(
@@ -256,7 +270,8 @@ class InboundProcessor:
                 },
             )
 
+            # Sanity check: ensure count never goes below 0
             self.db["rooms"].update_one(
-                {"_id": origin, "marsami_count": {"$lt": 0}},
-                {"$set": {"marsami_count": 0}},
+                {"room_id": origin, "simulation_id": simulation_id, "marsami_count": {"$lt": 0}},
+                {"$set": {"marsami_count": 0}}
             )
