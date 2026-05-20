@@ -1,19 +1,15 @@
 @echo off
-REM Script para iniciar a Web App (Node/React) localmente no Windows
+REM Script unificado: Faz o deploy de todos os serviços da Web-App via Docker
 
-echo Starting Web App...
 cd /d "%~dp0"
 
-REM Usar pnpm se estiver disponível, caso contrário usar npm
-where pnpm >nul 2>nul
-if %errorlevel%==0 (
-    echo Using pnpm...
-    call pnpm install
-    echo Running Vite dev server...
-    call pnpm run dev
-) else (
-    echo Using npm...
-    call npm install
-    echo Running Vite dev server...
-    call npm run dev
-)
+echo =========================================
+echo  MAZERUN - INICIAR WEB-APP (DOCKER)
+echo =========================================
+echo A parar containers antigos (se existirem)...
+docker compose down
+
+echo A iniciar a Web-App...
+REM Ao remover o "-d" e nomes especificos, o Docker Compose levanta a infraestrutura 
+REM toda e fica agarrado ao terminal a mostrar os logs da aplicacao.
+docker compose up --build

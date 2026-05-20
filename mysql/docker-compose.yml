@@ -41,6 +41,7 @@ services:
       - "8000:80"
     volumes:
       - ./php:/var/www/html
+      - ../game:/game
     depends_on:
       - mysql-db
 
