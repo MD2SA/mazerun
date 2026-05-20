@@ -8,8 +8,7 @@ Gere o estado atual do *handshake*.
 
 ```json
 {
-  "_id": "ObjectId",
-  "player_id": 1,
+  "_id": 1,                     // ID do jogador (player_id)
   "simulation_id": 50,
   "registered_at": "ISODate"
 }
@@ -37,7 +36,30 @@ Os campos em maiúsculas vêm diretamente do *payload* do sensor via MQTT.
 
 ---
 
-## 3. `moves`
+## 3. `simulation_configs`
+
+Guarda a configuração lida diretamente do MySQL de consulta no início de cada
+simulação. O `_id` é o ID da simulação, garantindo uma única configuração por
+simulação.
+
+```json
+{
+  "_id": 50,                     // ID da simulação
+  "numbermarsamis": 30,
+  "numberrooms": 10,
+  "numberplayers": 40,
+  "normalnoise": 10.0,
+  "noisevartoleration": 17.0,
+  "normaltemperature": 15,
+  "temperaturevarhightoleration": 20,
+  "temperaturevarlowtoleration": 1,
+  "loaded_at": "ISODate"
+}
+```
+
+---
+
+## 4. `moves`
 
 Especializada para o rastreio de jogadores no labirinto.
 
@@ -56,7 +78,7 @@ Especializada para o rastreio de jogadores no labirinto.
 
 ---
 
-## 4. `rooms`
+## 5. `rooms`
 
 Mantém o estado agregado das salas em tempo real, isolado por simulação.
 

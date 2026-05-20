@@ -39,6 +39,13 @@ class ActuatorService:
         payload = {"Type": "AcOff", "Player": player}
         self._publish(payload)
 
+    def set_ac(self, player, state):
+        """Set AC state (1 for ON, 0 for OFF) using hardware-compatible types"""
+        if state == 1:
+            self.ac_on(player)
+        else:
+            self.ac_off(player)
+
     def _publish(self, payload):
         print(f"[Actuator] Publishing to {self.topic}: {payload}")
         self.mqtt_client.client.publish(self.topic, json.dumps(payload))
