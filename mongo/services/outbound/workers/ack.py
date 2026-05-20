@@ -47,18 +47,19 @@ class AckWorker(threading.Thread):
             oid = source_id
 
         if collection_name:
-            self.db[collection_name].update_one(
-                {"_id": oid},
+            result = self.db[collection_name].update_one(
+                {"_id": oid, "process_status": {"$ne": "processed"}},
                 {"$set": {"process_status": "processed", "processed_at": datetime.now(timezone.utc)}}
             )
-            print(f"[AckWorker] Document {oid} in {collection_name} marked as PROCESSED (from {mongo_id})")
+            if result.modified_count > 0:
+                print(f"[AckWorker] Document {oid} in {collection_name} marked as PROCESSED (from {mongo_id})")
             return
 
         # Fallback search
-        collections = ["moves", "temperature", "sound", "actions", "rooms"]
+        collections = ["moves", "temperature", "sound", "actions", "rooms", "alerts"]
         for coll in collections:
             result = self.db[coll].update_one(
-                {"_id": oid},
+                {"_id": oid, "process_status": {"$ne": "processed"}},
                 {"$set": {"process_status": "processed", "processed_at": datetime.now(timezone.utc)}}
             )
             if result.modified_count > 0:

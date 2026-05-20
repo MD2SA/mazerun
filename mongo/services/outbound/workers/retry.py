@@ -7,7 +7,7 @@ class RetryWorker(threading.Thread):
         super().__init__(daemon=True)
         self.db = db
         self.timeout_seconds = timeout_seconds
-        self.collections = ["moves", "temperature", "sound", "rooms"]
+        self.collections = ["moves", "temperature", "sound", "rooms", "alerts"]
 
     def run(self):
         print(f"[RetryWorker] Started (timeout: {self.timeout_seconds}s)")

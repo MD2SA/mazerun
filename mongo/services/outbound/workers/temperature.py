@@ -45,26 +45,29 @@ class TemperatureWorker(BaseWorker):
             current_time = pd.to_datetime(timestamp)
             last_alert = self.last_alert_time.get(player)
             if not last_alert or (current_time - last_alert).total_seconds() > self.delta_t_seconds:
-                self.mqtt_client.client.publish(f"{self.topic_prefix}/message", json.dumps({
-                    "mongo_id": f"{doc_out['mongo_id']}_alert",
+                # Store System Alert in MongoDB for guaranteed delivery
+                self.db["alerts"].insert_one({
                     "collection": doc_out["collection"],
                     "player": player,
                     "game": doc.get("game", 1),
                     "simulation_id": doc_out["simulation_id"],
+                    "sensor": "temperature",
                     "value": temp,
+                    "alertType": "HIGH_TEMP",
                     "alert": f"High temperature detected ({temp})",
-                    "timestamp": doc_out["timestamp"]
-                }))
+                    "timestamp": doc_out["timestamp"],
+                    "process_status": "pending"
+                })
                 self.last_alert_time[player] = current_time
 
         # 2. Actuator Logic: AC Control
         if temp >= high_threshold:
             print(f"[TemperatureWorker] High temp ({temp}). Turning ON AC for Player {player}")
-            self.actuator.ac_on(player)
+            self.actuator.ac_on(player, doc_out["simulation_id"])
 
             # Send System Alert for high temp if above threshold
-            self.mqtt_client.client.publish(f"{self.topic_prefix}/message", json.dumps({
-                "mongo_id": f"{doc_out['mongo_id']}_high_alert",
+            # Store System Alert in MongoDB for guaranteed delivery
+            self.db["alerts"].insert_one({
                 "collection": doc_out["collection"],
                 "player": player,
                 "game": doc.get("game", 1),
@@ -73,16 +76,17 @@ class TemperatureWorker(BaseWorker):
                 "value": temp,
                 "alertType": "HIGH_TEMP",
                 "alert": f"High temperature detected ({temp}°C). AC ON.",
-                "timestamp": doc_out["timestamp"]
-            }))
+                "timestamp": doc_out["timestamp"],
+                "process_status": "pending"
+            })
 
         elif temp <= low_threshold:
             print(f"[TemperatureWorker] Low temp ({temp}). Turning OFF AC for Player {player}")
-            self.actuator.ac_off(player)
+            self.actuator.ac_off(player, doc_out["simulation_id"])
 
             # Send System Alert for low temp
-            self.mqtt_client.client.publish(f"{self.topic_prefix}/message", json.dumps({
-                "mongo_id": f"{doc_out['mongo_id']}_low_alert",
+            # Store System Alert in MongoDB for guaranteed delivery
+            self.db["alerts"].insert_one({
                 "collection": doc_out["collection"],
                 "player": player,
                 "game": doc.get("game", 1),
@@ -91,13 +95,14 @@ class TemperatureWorker(BaseWorker):
                 "value": temp,
                 "alertType": "LOW_TEMP",
                 "alert": f"Low temperature detected ({temp}°C). AC OFF.",
-                "timestamp": doc_out["timestamp"]
-            }))
+                "timestamp": doc_out["timestamp"],
+                "process_status": "pending"
+            })
 
         # 3. Emergency Safety: Close all doors if temperature is critical
         if hasattr(constants, 'TEMP_SAFETY_LIMIT') and temp >= constants.TEMP_SAFETY_LIMIT:
             print(f"[TemperatureWorker] CRITICAL temp ({temp}). Closing all doors!")
-            self.actuator.close_all_doors(player)
+            self.actuator.close_all_doors(player, doc_out["simulation_id"])
 
         self.mqtt_client.client.publish(f"{self.topic_prefix}/temperature", json.dumps(doc_out))
 

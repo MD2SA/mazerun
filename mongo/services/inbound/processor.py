@@ -124,10 +124,12 @@ class InboundProcessor:
                     player_id = int(player_id)
             except: pass
             simulation_id = payload.get("simulation_id")
+            handshake_id = payload.get("handshake_id")
         elif isinstance(payload, int):
             print(f"[Inbound WARNING] game/start received raw integer: {payload}. Missing simulation_id.")
             player_id = payload
             simulation_id = None
+            handshake_id = None
         else:
             print(f"[Inbound ERROR] game/start received invalid payload: {payload} (Type: {type(payload)})")
             return
@@ -161,7 +163,10 @@ class InboundProcessor:
         # Publish ACK so that MySQL/persistence can unblock and launch mazerun.exe
         if self.mqtt_publisher:
             topic_ack = f"pisid/{self.team_id}/game/start/ack"
-            ack = json.dumps({"player_id": player_id, "simulation_id": simulation_id})
+            ack_payload = {"player_id": player_id, "simulation_id": simulation_id}
+            if handshake_id:
+                ack_payload["handshake_id"] = handshake_id
+            ack = json.dumps(ack_payload)
             try:
                 self.mqtt_publisher.publish(topic_ack, ack)
                 print(
@@ -210,15 +215,26 @@ class InboundProcessor:
             doc["player_id"] = session["player_id"]
             doc["simulation_id"] = session["simulation_id"]
         else:
-            # No active session for this player — mark so the outbound worker
-            # can decide what to do (skip, queue, etc.)
             doc["player_id"] = player_id
             doc["simulation_id"] = None
+            self.db["discarded_events"].insert_one({
+                "collection": collection_name,
+                "payload": doc,
+                "reason": "no_active_session",
+                "player_id": player_id,
+                "discarded_at": datetime.now(timezone.utc),
+            })
             if player_id is not None:
                 print(
-                    f"[Inbound WARNING] No active session for player_id={player_id}. "
-                    "Document saved without simulation_id."
+                    f"[Inbound WARNING] Discarded '{collection_name}' event: "
+                    f"no active session for player_id={player_id}."
                 )
+            else:
+                print(
+                    f"[Inbound WARNING] Discarded '{collection_name}' event: "
+                    "missing/invalid player_id."
+                )
+            return
 
         # 3. Persist
         self.db[collection_name].insert_one(doc)

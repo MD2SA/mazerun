@@ -64,13 +64,13 @@ class MovementWorker(BaseWorker):
             self.mqtt_client.client.publish(f"{self.topic_prefix}/measure", json.dumps(doc_out))
             
             # --- Actuator Logic: Parity Check ---
-            self._check_marsami_parity(destiny, player)
+            self._check_marsami_parity(destiny, player, doc.get("simulation_id"))
             # ----------------------
         else:
             doc_out["error"] = "Invalid room transition"
             self.mqtt_client.client.publish(f"{self.topic_prefix}/invalid_measure", json.dumps(doc_out))
 
-    def _check_marsami_parity(self, room_id, current_player):
+    def _check_marsami_parity(self, room_id, current_player, simulation_id):
         """
         Checks if the number of even and odd marsamis in a room is equal.
         If equal, triggers the score sequence: Close -> Score -> Open.
@@ -103,9 +103,9 @@ class MovementWorker(BaseWorker):
             print(f"[Actuator] Parity detected in room {room_id} for Player {current_player}. Sequence: Close -> Score -> Open")
             
             # Sequence to ensure balance doesn't break during scoring
-            self.actuator.close_all_doors(current_player)
-            self.actuator.send_score(current_player, room_id)
-            self.actuator.open_all_doors(current_player)
+            self.actuator.close_all_doors(current_player, simulation_id)
+            self.actuator.send_score(current_player, room_id, simulation_id)
+            self.actuator.open_all_doors(current_player, simulation_id)
             
             self.trigger_counts[key] = self.trigger_counts.get(key, 0) + 1
 

@@ -98,11 +98,11 @@ class SoundWorker(BaseWorker):
         
         if sound >= action_threshold:
             print(f"[SoundWorker] Sound approaching limit ({sound}). Closing all doors for Player {player}")
-            self.actuator.close_all_doors(player)
+            self.actuator.close_all_doors(player, doc_out["simulation_id"])
 
             # Send System Alert
-            self.mqtt_client.client.publish(f"{self.topic_prefix}/message", json.dumps({
-                "mongo_id": f"{doc_out['mongo_id']}_alert",
+            # Store System Alert in MongoDB for guaranteed delivery
+            self.db["alerts"].insert_one({
                 "collection": doc_out["collection"],
                 "player": player,
                 "game": doc.get("game", 1),
@@ -111,13 +111,14 @@ class SoundWorker(BaseWorker):
                 "value": sound,
                 "alertType": "HIGH_SOUND",
                 "alert": f"High sound level detected ({sound} dB)",
-                "timestamp": doc_out["timestamp"]
-            }))
+                "timestamp": doc_out["timestamp"],
+                "process_status": "pending"
+            })
         else:
             baseline = normal_noise if normal_noise is not None else (constants.ACTUATOR_SOUND_HIGH - 10)
             if sound <= baseline:
                 print(f"[SoundWorker] Sound normalized ({sound}). Opening all doors for Player {player}")
-                self.actuator.open_all_doors(player)
+                self.actuator.open_all_doors(player, doc_out["simulation_id"])
         # ----------------------
 
     def _publish(self, topic, raw_doc, payload):

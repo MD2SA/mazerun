@@ -1,4 +1,5 @@
 import time
+import os
 from bson.json_util import dumps, loads
 import pymongo
 from pymongo.errors import PyMongoError
@@ -17,6 +18,12 @@ def save_resume_token(token):
     with open(RESUME_TOKEN_FILE, "w") as f:
         f.write(dumps(token))
 
+def clear_resume_token():
+    try:
+        os.remove(RESUME_TOKEN_FILE)
+    except FileNotFoundError:
+        pass
+
 class MongoChangeStreamDispatcher:
     def __init__(self, mongo_uri, db_name):
         self.mongo_uri = mongo_uri
@@ -29,12 +36,14 @@ class MongoChangeStreamDispatcher:
             "moves": Queue(),
             "temperature": Queue(),
             "sound": Queue(),
-            "rooms": Queue()
+            "rooms": Queue(),
+            "alerts": Queue()
         }
 
     def start_listening(self):
         resume_token = load_resume_token()
         print(f"[ChangeStream] Starting {'(resuming)' if resume_token else '(from now)'}")
+        self.queue_pending_documents()
 
         while True:
             try:
@@ -46,7 +55,11 @@ class MongoChangeStreamDispatcher:
                     }}
                 ]
                 
-                with self.db.watch(pipeline=pipeline, full_document="updateLookup", resume_after=resume_token) as stream:
+                watch_kwargs = {"pipeline": pipeline, "full_document": "updateLookup"}
+                if resume_token:
+                    watch_kwargs["resume_after"] = resume_token
+
+                with self.db.watch(**watch_kwargs) as stream:
                     print("[ChangeStream] Listening for new pending documents...")
 
                     for change in stream:
@@ -65,6 +78,14 @@ class MongoChangeStreamDispatcher:
 
             except PyMongoError as e:
                 print(f"[ChangeStream] Mongo error: {e}")
+                if getattr(e, "has_error_label", lambda label: False)("NonResumableChangeStreamError") or getattr(e, "code", None) == 280:
+                    print("[ChangeStream] Resume token is invalid. Clearing token and queueing pending documents.")
+                    clear_resume_token()
+                    resume_token = None
+                    self.queue_pending_documents()
+                    time.sleep(1)
+                    continue
+
                 if "replica set" in str(e).lower():
                     print("[ChangeStream] Falling back to Polling.")
                     self._fallback_polling()
@@ -73,6 +94,17 @@ class MongoChangeStreamDispatcher:
             except Exception as e:
                 print(f"[ChangeStream] Unexpected error: {e}")
                 time.sleep(5)
+
+    def queue_pending_documents(self):
+        queued = 0
+        for coll, queue in self.queues.items():
+            cursor = self.db[coll].find({"process_status": "pending"})
+            for doc in cursor:
+                queue.put((doc["_id"], doc))
+                queued += 1
+
+        if queued:
+            print(f"[ChangeStream] Queued {queued} pending document(s).")
 
     def _fallback_polling(self):
         print("[ChangeStream] Polling started...")

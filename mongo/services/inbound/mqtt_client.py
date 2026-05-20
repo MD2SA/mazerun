@@ -1,4 +1,6 @@
 import json
+import ast
+import re
 import paho.mqtt.client as mqtt
 
 class InboundMQTTClient:
@@ -19,9 +21,52 @@ class InboundMQTTClient:
                 client.subscribe(topic, qos=qos)
                 print(f"[Inbound MQTT] Subscribed to {topic} (QoS {qos})")
 
+    def decode_action_payload(self, raw_text):
+        if not raw_text.startswith("{") or not raw_text.endswith("}"):
+            return None
+
+        payload = {}
+        entries = raw_text[1:-1].split(",")
+        for entry in entries:
+            if ":" not in entry:
+                return None
+
+            key, value = entry.split(":", 1)
+            key = key.strip()
+            value = value.strip()
+
+            if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key):
+                return None
+
+            if re.fullmatch(r"-?\d+", value):
+                payload[key] = int(value)
+            else:
+                payload[key] = value.strip("\"'")
+
+        return payload
+
+    def decode_payload(self, topic, raw_payload):
+        raw_text = raw_payload.decode(errors="replace")
+
+        try:
+            return json.loads(raw_text)
+        except json.JSONDecodeError:
+            try:
+                return ast.literal_eval(raw_text)
+            except (SyntaxError, ValueError):
+                if "mazeact" in topic:
+                    payload = self.decode_action_payload(raw_text)
+                    if payload is not None:
+                        return payload
+
+                print(f"[Inbound MQTT WARNING] Ignoring invalid payload on {topic}: {raw_text[:200]}")
+                return None
+
     def on_message(self, client, userdata, msg):
         try:
-            payload = json.loads(msg.payload.decode())
+            payload = self.decode_payload(msg.topic, msg.payload)
+            if payload is None:
+                return
             self.processor.process_message(msg.topic, payload)
         except Exception as e:
             print(f"[Inbound MQTT ERROR] {e}")
