@@ -1,0 +1,7 @@
+services:
+  web-app:
+    build: .
+    container_name: mazerun-web-app
+    ports:
+      - "80:80"
+    restart: unless-stopped
