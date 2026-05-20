@@ -25,6 +25,263 @@ function require_auth(): array {
     return $payload;
 }
 
+function mqtt_encode_remaining_length(int $length): string {
+    $encoded = '';
+    do {
+        $byte = $length % 128;
+        $length = intdiv($length, 128);
+        if ($length > 0) {
+            $byte |= 128;
+        }
+        $encoded .= chr($byte);
+    } while ($length > 0);
+    return $encoded;
+}
+
+function mqtt_read_remaining_length($socket): ?int {
+    $multiplier = 1;
+    $value = 0;
+
+    do {
+        $encodedByte = fread($socket, 1);
+        if ($encodedByte === false || $encodedByte === '') {
+            return null;
+        }
+
+        $byte = ord($encodedByte);
+        $value += ($byte & 127) * $multiplier;
+        $multiplier *= 128;
+
+        if ($multiplier > 128 * 128 * 128) {
+            return null;
+        }
+    } while (($byte & 128) !== 0);
+
+    return $value;
+}
+
+function mqtt_read_packet($socket): ?array {
+    $header = fread($socket, 1);
+    if ($header === false || $header === '') {
+        return null;
+    }
+
+    $remainingLength = mqtt_read_remaining_length($socket);
+    if ($remainingLength === null) {
+        return null;
+    }
+
+    $body = '';
+    while (strlen($body) < $remainingLength) {
+        $chunk = fread($socket, $remainingLength - strlen($body));
+        if ($chunk === false || $chunk === '') {
+            return null;
+        }
+        $body .= $chunk;
+    }
+
+    return ['type' => ord($header) >> 4, 'body' => $body];
+}
+
+function mqtt_write_packet($socket, int $packetType, string $body, int $flags = 0): void {
+    fwrite($socket, chr(($packetType << 4) | $flags) . mqtt_encode_remaining_length(strlen($body)) . $body);
+}
+
+function mqtt_string(string $value): string {
+    return pack('n', strlen($value)) . $value;
+}
+
+function mqtt_start_simulation(int $team, int $playerId, int $simulationId): array {
+    $broker = getenv('MQTT_BROKER') ?: 'broker.hivemq.com';
+    $port = (int)(getenv('MQTT_PORT') ?: 1883);
+    $timeout = (int)(getenv('MQTT_HANDSHAKE_TIMEOUT') ?: 12);
+    $handshakeId = bin2hex(random_bytes(16));
+    $clientId = 'mazerun-web-' . bin2hex(random_bytes(4));
+    $topicStart = "pisid/$team/game/start";
+    $topicAck = "pisid/$team/game/start/ack";
+
+    $socket = @fsockopen($broker, $port, $errno, $errstr, 5);
+    if (!$socket) {
+        return [
+            'success' => false,
+            'message' => "MQTT connection failed: $errstr",
+            'topic_start' => $topicStart,
+            'topic_ack' => $topicAck
+        ];
+    }
+
+    stream_set_timeout($socket, 2);
+
+    $connectBody = mqtt_string('MQTT') . chr(4) . chr(2) . pack('n', 30) . mqtt_string($clientId);
+    mqtt_write_packet($socket, 1, $connectBody);
+
+    $packet = mqtt_read_packet($socket);
+    if (!$packet) {
+        fclose($socket);
+        return [
+            'success' => false,
+            'message' => 'MQTT broker connection timed out before CONNACK',
+            'topic_start' => $topicStart,
+            'topic_ack' => $topicAck
+        ];
+    }
+
+    if ($packet['type'] !== 2 || strlen($packet['body']) < 2) {
+        fclose($socket);
+        return [
+            'success' => false,
+            'message' => 'MQTT broker returned an invalid CONNACK packet',
+            'topic_start' => $topicStart,
+            'topic_ack' => $topicAck
+        ];
+    }
+
+    $connackCode = ord($packet['body'][1]);
+    if ($connackCode !== 0) {
+        fclose($socket);
+        return [
+            'success' => false,
+            'message' => "MQTT broker rejected the connection with code $connackCode",
+            'topic_start' => $topicStart,
+            'topic_ack' => $topicAck
+        ];
+    }
+
+    $packetId = random_int(1, 65535);
+    $subscribeBody = pack('n', $packetId) . mqtt_string($topicAck) . chr(0);
+    mqtt_write_packet($socket, 8, $subscribeBody, 2);
+
+    $packet = mqtt_read_packet($socket);
+    if (!$packet || $packet['type'] !== 9) {
+        fclose($socket);
+        return [
+            'success' => false,
+            'message' => "MQTT subscribe failed for $topicAck",
+            'topic_start' => $topicStart,
+            'topic_ack' => $topicAck
+        ];
+    }
+
+    $payload = json_encode([
+        'player_id' => $playerId,
+        'simulation_id' => $simulationId,
+        'handshake_id' => $handshakeId
+    ]);
+    mqtt_write_packet($socket, 3, mqtt_string($topicStart) . $payload);
+
+    $deadline = time() + $timeout;
+    while (time() < $deadline) {
+        $packet = mqtt_read_packet($socket);
+        if (!$packet || $packet['type'] !== 3) {
+            continue;
+        }
+
+        $body = $packet['body'];
+        if (strlen($body) < 2) {
+            continue;
+        }
+
+        $topicLength = unpack('n', substr($body, 0, 2))[1];
+        $topic = substr($body, 2, $topicLength);
+        $message = substr($body, 2 + $topicLength);
+        $ack = json_decode($message, true);
+
+        if (
+            $topic === $topicAck &&
+            is_array($ack) &&
+            (int)($ack['player_id'] ?? 0) === $playerId &&
+            (int)($ack['simulation_id'] ?? 0) === $simulationId &&
+            ($ack['handshake_id'] ?? '') === $handshakeId
+        ) {
+            mqtt_write_packet($socket, 14, '');
+            fclose($socket);
+            return [
+                'success' => true,
+                'message' => 'MongoDB acknowledged the simulation start',
+                'handshake_id' => $handshakeId,
+                'topic_start' => $topicStart,
+                'topic_ack' => $topicAck
+            ];
+        }
+    }
+
+    mqtt_write_packet($socket, 14, '');
+    fclose($socket);
+
+    return [
+        'success' => false,
+        'message' => 'Timeout waiting for MongoDB simulation ACK',
+        'handshake_id' => $handshakeId,
+        'topic_start' => $topicStart,
+        'topic_ack' => $topicAck
+    ];
+}
+
+function start_mazerun_process(int $team, int $simulationId): array {
+    $exePath = getenv('MAZERUN_EXE_PATH') ?: '/game/server/mazerun.exe';
+    $broker = getenv('MQTT_BROKER') ?: 'broker.hivemq.com';
+    $port = (int)(getenv('MQTT_PORT') ?: 1883);
+    $delay = (int)(getenv('MAZERUN_DELAY') ?: 2);
+    $logFile = "/tmp/mazerun-$simulationId.log";
+    $winePrefix = "/tmp/wine-mazerun";
+
+    if (!file_exists($exePath)) {
+        return [
+            'success' => false,
+            'message' => "mazerun.exe not found at $exePath",
+            'log_file' => $logFile
+        ];
+    }
+
+    $command = sprintf(
+        'mkdir -p %s && HOME=/tmp XDG_RUNTIME_DIR=/tmp WINEPREFIX=%s WINEDEBUG=-all nohup wine %s %d --flagMessage 1 --delay %d --broker %s --portbroker %d > %s 2>&1 & echo $!',
+        escapeshellarg($winePrefix),
+        escapeshellarg($winePrefix),
+        escapeshellarg($exePath),
+        $team,
+        $delay,
+        escapeshellarg($broker),
+        $port,
+        escapeshellarg($logFile)
+    );
+
+    $output = [];
+    $exitCode = 0;
+    exec($command, $output, $exitCode);
+    $pid = isset($output[0]) ? (int)$output[0] : 0;
+
+    if ($exitCode !== 0 || $pid <= 0) {
+        return [
+            'success' => false,
+            'message' => 'Failed to start mazerun.exe',
+            'log_file' => $logFile
+        ];
+    }
+
+    usleep(500000);
+    $checkOutput = [];
+    $checkExitCode = 0;
+    exec('kill -0 ' . $pid . ' 2>/dev/null', $checkOutput, $checkExitCode);
+
+    if ($checkExitCode !== 0) {
+        $logPreview = file_exists($logFile) ? trim(substr(file_get_contents($logFile), 0, 1000)) : '';
+        return [
+            'success' => false,
+            'message' => 'mazerun.exe exited immediately',
+            'pid' => $pid,
+            'log_file' => $logFile,
+            'log_preview' => $logPreview
+        ];
+    }
+
+    return [
+        'success' => true,
+        'message' => 'mazerun.exe started',
+        'pid' => $pid,
+        'log_file' => $logFile
+    ];
+}
+
 try {
     $conn = new mysqli('mysql-db', 'root', 'root', 'mazerun');
     $conn->set_charset("utf8mb4");
@@ -201,11 +458,77 @@ try {
 
         // ── SIMULATIONS ───────────────────────────────────────────────────────
         case 'create_simulation':
-            $team      = (int)($data['team']      ?? 0);
-            $player_id = (int)($data['player_id'] ?? 0);
+            $team = (int)($authPayload['team'] ?? 0);
+            $owner_email = $requester_email;
+
+            if ($authPayload['type'] === 'adm') {
+                $team = (int)($data['team'] ?? $team);
+                $owner_email = trim($data['owner_email'] ?? $requester_email);
+
+                $ownerStmt = $conn->prepare("SELECT email FROM user WHERE email = ?");
+                $ownerStmt->bind_param("s", $owner_email);
+                $ownerStmt->execute();
+                if (!$ownerStmt->get_result()->fetch_assoc()) {
+                    $response = ["success" => false, "message" => "Owner user email does not exist"];
+                    break;
+                }
+            }
+
+            $player_id = $team;
+
+            if ($team <= 0) {
+                $response = ["success" => false, "message" => "User team is required to start a simulation"];
+                break;
+            }
+
             $stmt = $conn->prepare("CALL sp_create_game(?, ?, ?, ?)");
             $stmt->bind_param("ssii", $requester_email, $data['description'], $team, $player_id);
             $response = handle_sp_result($stmt);
+
+            $simulation_id = (int)($response['data']['game_id'] ?? 0);
+            if (!$simulation_id) {
+                $response = ["success" => false, "message" => "Simulation was created but no game_id was returned"];
+                break;
+            }
+
+            if ($owner_email !== $requester_email) {
+                $ownerUpdateStmt = $conn->prepare("UPDATE simulation SET user_email = ? WHERE id = ?");
+                $ownerUpdateStmt->bind_param("si", $owner_email, $simulation_id);
+                $ownerUpdateStmt->execute();
+            }
+
+            $startResult = mqtt_start_simulation($team, $player_id, $simulation_id);
+            $response['data']['player_id'] = $player_id;
+            $response['data']['team'] = $team;
+            $response['data']['owner_email'] = $owner_email;
+            $response['data']['mqtt'] = $startResult;
+            $response['data']['started'] = $startResult['success'];
+
+            if (!$startResult['success']) {
+                $cleanupStmt = $conn->prepare("DELETE FROM simulation WHERE id = ? AND user_email = ?");
+                $cleanupStmt->bind_param("is", $simulation_id, $owner_email);
+                $cleanupStmt->execute();
+
+                $response['success'] = false;
+                $response['message'] = "Simulation start failed and was rolled back: " . $startResult['message'];
+                $response['data']['rolled_back'] = $cleanupStmt->affected_rows > 0;
+            } else {
+                $gameResult = start_mazerun_process($team, $simulation_id);
+                $response['data']['game'] = $gameResult;
+
+                if (!$gameResult['success']) {
+                    $cleanupStmt = $conn->prepare("DELETE FROM simulation WHERE id = ? AND user_email = ?");
+                    $cleanupStmt->bind_param("is", $simulation_id, $owner_email);
+                    $cleanupStmt->execute();
+
+                    $response['success'] = false;
+                    $response['message'] = "Simulation handshake succeeded, but game start failed and was rolled back: " . $gameResult['message'];
+                    $response['data']['rolled_back'] = $cleanupStmt->affected_rows > 0;
+                    break;
+                }
+
+                $response['message'] = "Simulation created and game started successfully";
+            }
             break;
 
         case 'update_simulation':
