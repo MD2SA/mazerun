@@ -12,7 +12,8 @@ class AlertWorker(BaseWorker):
         """
         payload = {
             "mongo_id": str(doc["_id"]),
-            "collection": doc.get("collection", "unknown"),
+            "collection": "alerts",
+            "source_collection": doc.get("collection", "unknown"),
             "player": doc.get("player"),
             "game": doc.get("game", 1),
             "simulation_id": doc.get("simulation_id"),
