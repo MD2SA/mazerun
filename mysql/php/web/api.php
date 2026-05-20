@@ -12,7 +12,7 @@ require_once __DIR__ . '/jwt.php';
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
 // ─── Public actions (no JWT required) ────────────────────────────────────────
-const PUBLIC_ACTIONS = ['login', 'register', 'get_status'];
+const PUBLIC_ACTIONS = ['login', 'register', 'get_status', 'check_mazerun'];
 
 // ─── Helper: require a valid JWT and return its payload ──────────────────────
 function require_auth(): array {
@@ -591,6 +591,27 @@ try {
                 fclose($fp);
             }
             $response = ["success" => true, "data" => $status];
+            break;
+
+        case 'check_mazerun':
+            $isRunning = false;
+            $output = [];
+            $exitCode = 0;
+            if (strncasecmp(PHP_OS, 'WIN', 3) === 0) {
+                @exec("tasklist /FI \"IMAGENAME eq mazerun.exe\"", $output, $exitCode);
+                foreach ($output as $line) {
+                    if (stripos($line, 'mazerun.exe') !== false) {
+                        $isRunning = true;
+                        break;
+                    }
+                }
+            } else {
+                @exec("pgrep -f mazerun.exe", $output, $exitCode);
+                if ($exitCode === 0 && !empty($output)) {
+                    $isRunning = true;
+                }
+            }
+            $response = ["success" => true, "running" => $isRunning];
             break;
     }
 

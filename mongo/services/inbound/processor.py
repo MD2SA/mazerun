@@ -29,6 +29,11 @@ class InboundProcessor:
         # Restore any previously stored active sessions from MongoDB on startup
         self._restore_sessions()
 
+        # Start background thread to check for session termination criteria
+        import threading
+        self._termination_thread = threading.Thread(target=self._monitor_sessions, daemon=True)
+        self._termination_thread.start()
+
     # ------------------------------------------------------------------
     # Session management
     # ------------------------------------------------------------------
@@ -85,6 +90,130 @@ class InboundProcessor:
     def _get_session_for_player(self, player_id):
         """Returns the active session dict for a player, or None."""
         return self._active_sessions.get(player_id)
+
+    def _terminate_session(self, player_id, simulation_id, reason="unknown"):
+        """Terminate the active session by removing it from cache and MongoDB."""
+        print(f"[Inbound] ⏹ Terminating active session: player_id={player_id}, simulation_id={simulation_id} (Reason: {reason})")
+        # Remove from memory cache
+        self._active_sessions.pop(player_id, None)
+        
+        # Delete from MongoDB active_sessions collection
+        try:
+            self.db["active_sessions"].delete_one({"_id": player_id})
+            print(f"[Inbound] ✔ Deleted active session from MongoDB for player_id={player_id}")
+        except Exception as e:
+            print(f"[Inbound ERROR] Deleting active session from MongoDB: {e}")
+
+    def _monitor_sessions(self):
+        """Periodically runs background checks for session termination criteria."""
+        import time
+        import urllib.request
+        import json
+        
+        print("[Inbound] Session termination monitoring background thread started.")
+        while True:
+            try:
+                # 1. Retrieve all current active sessions from MongoDB
+                # (to ensure alignment across restarts/multiple instances)
+                active_sessions = list(self.db["active_sessions"].find())
+                
+                for doc in active_sessions:
+                    player_id = doc.get("_id")
+                    simulation_id = doc.get("simulation_id")
+                    registered_at = doc.get("registered_at")
+                    
+                    if player_id is None or simulation_id is None:
+                        continue
+                        
+                    # Check Criterion 1: Timeout of 5 minutes (300 seconds)
+                    if registered_at:
+                        if registered_at.tzinfo is None:
+                            registered_at = registered_at.replace(tzinfo=timezone.utc)
+                        elapsed = (datetime.now(timezone.utc) - registered_at).total_seconds()
+                        if elapsed > 300:
+                            self._terminate_session(player_id, simulation_id, f"5-minute timeout reached ({int(elapsed)}s)")
+                            continue
+                            
+                    # Check Criterion 2: All Marsamis Tired (status == 2)
+                    # Get simulation configuration to know how many marsamis exist
+                    total_marsamis = None
+                    if self.simulation_configs:
+                        config = self.simulation_configs.get_or_fetch(simulation_id)
+                        if config:
+                            try:
+                                total_marsamis = int(config.get("numbermarsamis"))
+                            except (TypeError, ValueError):
+                                pass
+                                
+                    # Fetch the latest movement status of each Marsami in this simulation
+                    pipeline = [
+                        {"$match": {"simulation_id": simulation_id}},
+                        {"$sort": {"timestamp": -1}},
+                        {"$group": {
+                            "_id": "$Marsami",
+                            "latest_status": {"$first": "$Status"},
+                            "latest_status_lower": {"$first": "$status"}
+                        }}
+                    ]
+                    results = list(self.db["moves"].aggregate(pipeline))
+                    
+                    tired_count = 0
+                    marsamis_seen = len(results)
+                    for r in results:
+                        st = r.get("latest_status")
+                        if st is None:
+                            st = r.get("latest_status_lower")
+                        try:
+                            st = int(st)
+                        except (TypeError, ValueError):
+                            st = 1
+                        if st == 2:
+                            tired_count += 1
+                            
+                    # Check if all have status == 2
+                    is_all_tired = False
+                    if total_marsamis is not None:
+                        if marsamis_seen >= total_marsamis and tired_count >= total_marsamis:
+                            is_all_tired = True
+                    else:
+                        if marsamis_seen > 0 and tired_count == marsamis_seen:
+                            is_all_tired = True
+                            
+                    if is_all_tired:
+                        self._terminate_session(player_id, simulation_id, "all marsamis are tired (status == 2)")
+                        continue
+                        
+                    # Check Criterion 3: mazerun.exe has terminated (check PHP)
+                    php_urls = [
+                        "http://php:80/web/api.php?action=check_mazerun",
+                        "http://localhost:8000/web/api.php?action=check_mazerun",
+                        "http://127.0.0.1:8000/web/api.php?action=check_mazerun"
+                    ]
+                    is_running = True
+                    fetched_status = False
+                    for url in php_urls:
+                        try:
+                            req = urllib.request.Request(url, method="GET")
+                            with urllib.request.urlopen(req, timeout=2) as response:
+                                if response.status == 200:
+                                    res_data = json.loads(response.read().decode())
+                                    if res_data.get("success"):
+                                        is_running = res_data.get("running", False)
+                                        fetched_status = True
+                                        break
+                        except Exception:
+                            continue
+                            
+                    # If we successfully queried the PHP endpoint and it returned that mazerun.exe
+                    # is no longer running, terminate the session
+                    if fetched_status and not is_running:
+                        self._terminate_session(player_id, simulation_id, "mazerun.exe process terminated")
+                        continue
+                        
+                time.sleep(5)
+            except Exception as e:
+                print(f"[Inbound monitor ERROR] {e}")
+                time.sleep(5)
 
     # ------------------------------------------------------------------
     # Main entry point
