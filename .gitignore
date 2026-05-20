@@ -2,6 +2,8 @@ game/**
 
 persistence_session.log
 mongo/resume_token.json
+analytics/
+_internal
 
 # Python
 __pycache__/

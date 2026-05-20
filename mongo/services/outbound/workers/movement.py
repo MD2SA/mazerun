@@ -51,6 +51,7 @@ class MovementWorker(BaseWorker):
             "from": origin,
             "to": destiny,
             "marsami": marsami,
+            "status": doc.get("Status") or doc.get("status") or 1,
             "timestamp": doc.get("Hour") or doc.get("timestamp")
         }
 
