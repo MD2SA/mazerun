@@ -17,7 +17,7 @@ services:
     depends_on:
       - mysql-db
     volumes:
-      - ./persistence/config.yaml:/app/config.yaml
+      - ./persistence:/app
       - ../game:/game
     environment:
       - MYSQL_HOST=mysql-db
