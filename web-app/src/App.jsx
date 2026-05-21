@@ -1,9 +1,9 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
-import { tokenStore } from './services/api';
+import { api, tokenStore } from './services/api';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import {
-  LayoutDashboard, Users as UsersIcon, History, PlayCircle, LogOut,
-  Settings, Filter, ChevronDown, Activity, Globe, Sun, Moon
+  LayoutDashboard, Users as UsersIcon, User as UserIcon, History, PlayCircle, LogOut,
+  Settings, Filter, ChevronDown, Activity, Globe, Sun, Moon, Shield, Terminal
 } from 'lucide-react';
 
 import Login from './pages/Login';
@@ -11,6 +11,7 @@ import Overview from './pages/Overview';
 import Users from './pages/Users';
 import Simulations from './pages/Simulations';
 import Logs from './pages/Logs';
+import Profile from './pages/Profile';
 
 // Context for global state
 const AppContext = createContext();
@@ -19,10 +20,11 @@ export const useApp = () => useContext(AppContext);
 const Sidebar = ({ user, onLogout, theme }) => {
   const location = useLocation();
   const menu = [
-    { name: 'Overview', path: '/', icon: LayoutDashboard },
+    { name: 'Dashboard', path: '/', icon: LayoutDashboard },
     { name: 'Simulations', path: '/simulations', icon: PlayCircle },
-    { name: 'Users', path: '/users', icon: UsersIcon },
-    { name: 'System Logs', path: '/logs', icon: History },
+    { name: user.type === 'adm' ? 'Users' : 'My Team', path: '/users', icon: UsersIcon },
+    { name: 'System Logs', path: '/logs', icon: Terminal },
+    { name: 'Security', path: '/profile', icon: Shield },
   ];
 
   return (
@@ -64,6 +66,16 @@ const Sidebar = ({ user, onLogout, theme }) => {
 };
 
 const Header = ({ user, teamFilter, setTeamFilter, theme, toggleTheme }) => {
+  const [teams, setTeams] = useState([]);
+
+  useEffect(() => {
+    if (user.type === 'adm') {
+      api.getTeams().then(res => {
+        if (res.success) setTeams(res.data);
+      });
+    }
+  }, [user]);
+
   return (
     <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
       <h1 style={{ fontSize: '1.5rem', fontWeight: 600 }}>{document.title || 'Dashboard'}</h1>
@@ -74,11 +86,11 @@ const Header = ({ user, teamFilter, setTeamFilter, theme, toggleTheme }) => {
             <Globe size={16} color="var(--text-secondary)" />
             <select
               value={teamFilter || ''}
-              onChange={(e) => setTeamFilter(e.target.value || null)}
+              onChange={(e) => setTeamFilter(e.target.value ? parseInt(e.target.value) : null)}
               style={{ background: 'var(--bg-card)', fontSize: '0.85rem' }}
             >
               <option value="">All Teams</option>
-              {[1, 2, 3, 10, 20, 25, 30].map(t => <option key={t} value={t}>Team {t}</option>)}
+              {teams.map(t => <option key={t} value={t}>Team {t}</option>)}
             </select>
           </div>
         )}
@@ -99,7 +111,14 @@ const Header = ({ user, teamFilter, setTeamFilter, theme, toggleTheme }) => {
 };
 
 const App = () => {
-  const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('user')));
+  const [user, setUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('user');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
   const [teamFilter, setTeamFilter] = useState(null);
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
 
@@ -132,7 +151,7 @@ const App = () => {
   if (!user) return <Login onLogin={handleLogin} theme={theme} toggleTheme={toggleTheme} />;
 
   return (
-    <AppContext.Provider value={{ user, teamFilter, setTeamFilter, theme, toggleTheme }}>
+    <AppContext.Provider value={{ user, setUser, teamFilter, setTeamFilter, theme, toggleTheme }}>
       <Router>
         <div className="app-container">
           <Sidebar user={user} onLogout={handleLogout} theme={theme} toggleTheme={toggleTheme} />
@@ -143,6 +162,7 @@ const App = () => {
               <Route path="/simulations" element={<Simulations />} />
               <Route path="/users" element={<Users />} />
               <Route path="/logs" element={<Logs />} />
+              <Route path="/profile" element={<Profile />} />
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </main>

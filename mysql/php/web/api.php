@@ -12,7 +12,7 @@ require_once __DIR__ . '/jwt.php';
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
 // ─── Public actions (no JWT required) ────────────────────────────────────────
-const PUBLIC_ACTIONS = ['login', 'register', 'get_status'];
+const PUBLIC_ACTIONS = ['login', 'register', 'get_status', 'get_teams'];
 
 // ─── Helper: require a valid JWT and return its payload ──────────────────────
 function require_auth(): array {
@@ -142,8 +142,14 @@ try {
 
         // ── GET USERS ─────────────────────────────────────────────────────────
         case 'get_users':
-            $res   = $conn->query("CALL sp_get_all_users()");
-            $users = $res->fetch_all(MYSQLI_ASSOC);
+            $stmt = $conn->prepare("CALL sp_get_all_users()");
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $users = $result->fetch_all(MYSQLI_ASSOC);
+            $stmt->close();
+            // Clear remaining results from the connection
+            while($conn->more_results()) $conn->next_result();
+
             $response = ["success" => true, "data" => $users];
             break;
 
@@ -225,11 +231,13 @@ try {
         // ── ANALYTICS ─────────────────────────────────────────────────────────
         case 'get_analytics':
             $teamFilter = $_GET['team'] ?? $data['team'] ?? null;
-            $where = !empty($teamFilter) ? "WHERE team = " . (int)$teamFilter : "";
+            $where = !empty($teamFilter) ? "WHERE s.team = " . (int)$teamFilter : "";
+            $sim_where = !empty($teamFilter) ? "WHERE team = " . (int)$teamFilter : "";
+
             $stats = [
-                "total_sims"     => $conn->query("SELECT COUNT(*) FROM simulation $where")->fetch_row()[0],
+                "total_sims"     => $conn->query("SELECT COUNT(*) FROM simulation $sim_where")->fetch_row()[0],
                 "total_measures" => $conn->query("SELECT COUNT(*) FROM measure m JOIN simulation s ON m.simulation_id = s.id $where")->fetch_row()[0],
-                "total_alerts"   => $conn->query("SELECT COUNT(*) FROM alert m JOIN simulation s ON m.simulation_id = s.id $where")->fetch_row()[0],
+                "total_alerts"   => $conn->query("SELECT COUNT(*) FROM alert a JOIN simulation s ON a.simulation_id = s.id $where")->fetch_row()[0],
                 "avg_temp"       => round($conn->query("SELECT AVG(temperature) FROM temperature t JOIN simulation s ON t.simulation_id = s.id $where")->fetch_row()[0], 2),
                 "avg_sound"      => round($conn->query("SELECT AVG(sound) FROM sound t JOIN simulation s ON t.simulation_id = s.id $where")->fetch_row()[0], 2),
                 "total_marsamis" => $conn->query("SELECT SUM(oddMarsamis + evenMarsamis) FROM ocupation o JOIN simulation s ON o.id = s.id $where")->fetch_row()[0] ?? 0
@@ -249,11 +257,35 @@ try {
         // ── UNIFIED LOGS ──────────────────────────────────────────────────────
         case 'get_unified_logs':
             $sim_id_param = (int)($_GET['simulation_id'] ?? $data['simulation_id'] ?? 0);
+            $team_param   = (int)($_GET['team'] ?? $data['team'] ?? 0);
             $limit        = (int)($_GET['limit'] ?? $data['limit'] ?? 100);
-            $where        = $sim_id_param ? "WHERE simulation_id = $sim_id_param" : "";
-            $sql          = "(SELECT time, 'ALERT' as type, msg as detail FROM alert $where) UNION ALL (SELECT time, 'ACTION' as type, CONCAT(action_type, ' -> ', target) as detail FROM action $where) UNION ALL (SELECT time, 'INVALID' as type, reason as detail FROM invalid_measure $where) UNION ALL (SELECT time, 'OUTLIER' as type, reason as detail FROM sound_outlier $where) ORDER BY time DESC LIMIT $limit";
+
+            $where = "1=1";
+            if ($sim_id_param > 0) {
+                $where = "simulation_id = $sim_id_param";
+            } else if ($team_param > 0) {
+                // To filter global logs by team, we join with the simulation table
+                $where = "simulation_id IN (SELECT id FROM simulation WHERE team = $team_param)";
+            }
+
+            $sql = "(SELECT time, 'ALERT' as type, msg as detail FROM alert WHERE $where)
+                    UNION ALL
+                    (SELECT time, 'ACTION' as type, CONCAT(action_type, ' -> ', target) as detail FROM action WHERE $where)
+                    UNION ALL
+                    (SELECT time, 'INVALID' as type, reason as detail FROM invalid_measure WHERE $where)
+                    UNION ALL
+                    (SELECT time, 'OUTLIER' as type, reason as detail FROM sound_outlier WHERE simulation_id IN (SELECT id FROM simulation WHERE team = $team_param OR $team_param=0))
+                    ORDER BY time DESC LIMIT $limit";
+
             $res          = $conn->query($sql);
             $response     = ["success" => true, "data" => $res->fetch_all(MYSQLI_ASSOC)];
+            break;
+
+        case 'get_teams':
+            $sql = "SELECT team FROM user WHERE team IS NOT NULL UNION SELECT team FROM simulation ORDER BY team ASC";
+            $res = $conn->query($sql);
+            $teams = array_map(fn($row) => (int)$row[0], $res->fetch_all());
+            $response = ["success" => true, "data" => $teams];
             break;
 
         // ── SYSTEM STATUS ─────────────────────────────────────────────────────

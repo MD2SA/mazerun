@@ -20,9 +20,14 @@ const Users = () => {
     const res = await api.getUsers();
     if (res.success) {
       const allUsers = res.data || [];
-      // RBAC: usr only sees themselves
+      // RBAC: usr sees themselves and their team members
       if (currentUser.type === 'usr') {
-        setUsers(allUsers.filter(u => u.email === currentUser.email));
+        const myTeam = currentUser.team;
+        setUsers(allUsers.filter(u => {
+          const isMe = String(u.email).toLowerCase() === String(currentUser.email).toLowerCase();
+          const sameTeam = myTeam != null && u.team != null && String(u.team) === String(myTeam);
+          return isMe || sameTeam;
+        }));
       } else {
         setUsers(allUsers);
       }
@@ -70,8 +75,8 @@ const Users = () => {
     <div className="animate-fade">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <div>
-          <h2 style={{ fontSize: '1.2rem' }}>System Directory</h2>
-          <p className="text-secondary">Manage access control and team assignments</p>
+          <h2 style={{ fontSize: '1.2rem' }}>{currentUser.type === 'adm' ? 'System Directory' : 'Team Directory'}</h2>
+          <p className="text-secondary">{currentUser.type === 'adm' ? 'Manage access control and team assignments' : `Members of Team ${currentUser.team}`}</p>
         </div>
         {currentUser.type === 'adm' && (
           <button onClick={() => { setFormData({ name: '', email: '', phone: '', birth: '', team: '', type: 'usr' }); setShowCreate(true); }} className="btn btn-primary">
@@ -88,7 +93,7 @@ const Users = () => {
               <th>Contacts</th>
               <th>Team Context</th>
               <th>Role</th>
-              <th style={{ textAlign: 'right' }}>Management</th>
+              {currentUser.type === 'adm' && <th style={{ textAlign: 'right' }}>Management</th>}
             </tr>
           </thead>
           <tbody>
@@ -100,7 +105,7 @@ const Users = () => {
                       <UserIcon size={18} className="text-secondary" />
                     </div>
                     <div>
-                      <div style={{ fontWeight: 600 }}>{u.name}</div>
+                      <div style={{ fontWeight: 600 }}>{u.name} {u.email === currentUser.email && <span style={{ color: 'var(--primary)', fontSize: '0.7rem' }}>(YOU)</span>}</div>
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{u.email}</div>
                     </div>
                   </div>
@@ -115,25 +120,27 @@ const Users = () => {
                 <td>
                   <span className={`badge badge-${u.type.toLowerCase()}`}>{u.type}</span>
                 </td>
-                <td style={{ textAlign: 'right' }}>
-                  <div className="d-flex justify-content-end gap-2">
-                    <button
-                      onClick={() => openEdit(u)}
-                      className="btn btn-ghost"
-                      style={{ padding: '0.4rem' }}
-                    >
-                      <Shield size={16} />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(u.email)}
-                      className="btn btn-ghost"
-                      style={{ color: 'var(--accent-danger)', padding: '0.4rem' }}
-                      disabled={u.email === currentUser.email}
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </td>
+                {currentUser.type === 'adm' && (
+                  <td style={{ textAlign: 'right' }}>
+                    <div className="d-flex justify-content-end gap-2">
+                      <button
+                        onClick={() => openEdit(u)}
+                        className="btn btn-ghost"
+                        style={{ padding: '0.4rem' }}
+                      >
+                        <Shield size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(u.email)}
+                        className="btn btn-ghost"
+                        style={{ color: 'var(--accent-danger)', padding: '0.4rem' }}
+                        disabled={u.email === currentUser.email}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
