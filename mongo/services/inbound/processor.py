@@ -95,20 +95,33 @@ class InboundProcessor:
         """Terminate the active session by removing it from cache and MongoDB."""
         print(f"[Inbound] ⏹ Terminating active session: player_id={player_id}, simulation_id={simulation_id} (Reason: {reason})")
         # Remove from memory cache
-        self._active_sessions.pop(player_id, None)
+        cached = self._active_sessions.get(player_id)
+        if cached and cached.get("simulation_id") not in (None, simulation_id):
+            print(
+                f"[Inbound] Skipping cache removal for player_id={player_id}: "
+                f"active simulation changed to {cached.get('simulation_id')}"
+            )
+        else:
+            self._active_sessions.pop(player_id, None)
         
         # Delete from MongoDB active_sessions collection
         try:
-            self.db["active_sessions"].delete_one({"_id": player_id})
-            print(f"[Inbound] ✔ Deleted active session from MongoDB for player_id={player_id}")
+            res = self.db["active_sessions"].delete_one(
+                {"_id": player_id, "simulation_id": simulation_id}
+            )
+            if res.deleted_count > 0:
+                print(f"[Inbound] ✔ Deleted active session from MongoDB for player_id={player_id}")
+            else:
+                print(
+                    f"[Inbound] ℹ Session already absent or replaced for "
+                    f"player_id={player_id}, simulation_id={simulation_id}"
+                )
         except Exception as e:
             print(f"[Inbound ERROR] Deleting active session from MongoDB: {e}")
 
     def _monitor_sessions(self):
         """Periodically runs background checks for session termination criteria."""
         import time
-        import urllib.request
-        import json
         
         print("[Inbound] Session termination monitoring background thread started.")
         while True:
@@ -183,33 +196,6 @@ class InboundProcessor:
                         self._terminate_session(player_id, simulation_id, "all marsamis are tired (status == 2)")
                         continue
                         
-                    # Check Criterion 3: mazerun.exe has terminated (check PHP)
-                    php_urls = [
-                        "http://php:80/web/api.php?action=check_mazerun",
-                        "http://localhost:8000/web/api.php?action=check_mazerun",
-                        "http://127.0.0.1:8000/web/api.php?action=check_mazerun"
-                    ]
-                    is_running = True
-                    fetched_status = False
-                    for url in php_urls:
-                        try:
-                            req = urllib.request.Request(url, method="GET")
-                            with urllib.request.urlopen(req, timeout=2) as response:
-                                if response.status == 200:
-                                    res_data = json.loads(response.read().decode())
-                                    if res_data.get("success"):
-                                        is_running = res_data.get("running", False)
-                                        fetched_status = True
-                                        break
-                        except Exception:
-                            continue
-                            
-                    # If we successfully queried the PHP endpoint and it returned that mazerun.exe
-                    # is no longer running, terminate the session
-                    if fetched_status and not is_running:
-                        self._terminate_session(player_id, simulation_id, "mazerun.exe process terminated")
-                        continue
-                        
                 time.sleep(5)
             except Exception as e:
                 print(f"[Inbound monitor ERROR] {e}")
@@ -224,6 +210,9 @@ class InboundProcessor:
         topic_start = f"pisid/{self.team_id}/game/start"
         if topic == topic_start or topic == "game/start":
             self._handle_game_start(payload)
+            return
+        if topic == f"pisid/{self.team_id}/simulation/finished" or topic == "simulation/finished":
+            self._handle_simulation_finished(payload)
             return
 
         # Determine target collection based on topic
@@ -309,6 +298,25 @@ class InboundProcessor:
                 "[Inbound WARNING] No mqtt_publisher set — cannot send "
                 "game/start/ack. mazerun.exe will not start."
             )
+
+    def _handle_simulation_finished(self, payload):
+        """Terminate active session from MQTT event published by /mysql."""
+        if not isinstance(payload, dict):
+            print(f"[Inbound WARNING] simulation/finished invalid payload type: {type(payload)}")
+            return
+
+        try:
+            player_id = int(payload.get("player_id"))
+            simulation_id = int(payload.get("simulation_id"))
+        except (TypeError, ValueError):
+            print(f"[Inbound WARNING] simulation/finished missing fields: {payload}")
+            return
+
+        self._terminate_session(
+            player_id,
+            simulation_id,
+            reason="mazerun.exe process terminated (MQTT simulation/finished)"
+        )
 
     def _save_sensor_document(self, collection_name, payload):
         """Save a raw sensor document to MongoDB, stamped with active session."""
