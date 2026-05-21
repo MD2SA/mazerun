@@ -108,7 +108,7 @@ const Simulations = () => {
   const [selectedSim, setSelectedSim] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
   const [editingSim, setEditingSim] = useState(null);
-  const [newSim, setNewSim] = useState({ description: '', team: user.team || '', owner_email: user.email || '' });
+  const [newSim, setNewSim] = useState({ description: '', team: user.team || '', owner_email: user.email || '', number_marsamis: 30 });
   const [createStatus, setCreateStatus] = useState(null);
   const [pageStatus, setPageStatus] = useState(null);
   const [creating, setCreating] = useState(false);
@@ -140,6 +140,7 @@ const Simulations = () => {
 
     const res = await api.createSimulation({
       description: newSim.description.trim(),
+      number_marsamis: Number(newSim.number_marsamis),
       ...(user.type === 'adm' ? {
         team: Number(newSim.team),
         owner_email: newSim.owner_email.trim(),
@@ -152,7 +153,7 @@ const Simulations = () => {
         message: res.message || 'Simulation created and started successfully',
       });
       setShowCreate(false);
-      setNewSim({ description: '', team: user.team || '', owner_email: user.email || '' });
+      setNewSim({ description: '', team: user.team || '', owner_email: user.email || '', number_marsamis: 30 });
       fetchSims();
     } else {
       setCreateStatus({
@@ -275,6 +276,20 @@ const Simulations = () => {
                   style={{ width: '100%' }}
                 />
               </div>
+              {showCreate && (
+                <div className="input-group">
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Number of Marsamis</label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    max="100"
+                    value={newSim.number_marsamis}
+                    onChange={(e) => setNewSim({ ...newSim, number_marsamis: e.target.value })}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+              )}
               {showCreate ? (
                 <>
                   {user.type === 'adm' && (

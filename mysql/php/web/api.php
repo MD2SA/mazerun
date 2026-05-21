@@ -91,7 +91,7 @@ function mqtt_string(string $value): string {
     return pack('n', strlen($value)) . $value;
 }
 
-function mqtt_start_simulation(int $team, int $playerId, int $simulationId): array {
+function mqtt_start_simulation(int $team, int $playerId, int $simulationId, int $marsamis = 30): array {
     $broker = getenv('MQTT_BROKER') ?: 'broker.hivemq.com';
     $port = (int)(getenv('MQTT_PORT') ?: 1883);
     $timeout = (int)(getenv('MQTT_HANDSHAKE_TIMEOUT') ?: 12);
@@ -165,7 +165,8 @@ function mqtt_start_simulation(int $team, int $playerId, int $simulationId): arr
     $payload = json_encode([
         'player_id' => $playerId,
         'simulation_id' => $simulationId,
-        'handshake_id' => $handshakeId
+        'handshake_id' => $handshakeId,
+        'numbermarsamis' => $marsamis
     ]);
     mqtt_write_packet($socket, 3, mqtt_string($topicStart) . $payload);
 
@@ -217,7 +218,7 @@ function mqtt_start_simulation(int $team, int $playerId, int $simulationId): arr
     ];
 }
 
-function start_mazerun_process(int $team, int $playerId, int $simulationId): array {
+function start_mazerun_process(int $team, int $playerId, int $simulationId, int $marsamis = 30): array {
     $exePath = getenv('MAZERUN_EXE_PATH') ?: '/game/server/mazerun.exe';
     $broker = getenv('MQTT_BROKER') ?: 'broker.hivemq.com';
     $port = (int)(getenv('MQTT_PORT') ?: 1883);
@@ -234,11 +235,12 @@ function start_mazerun_process(int $team, int $playerId, int $simulationId): arr
     }
 
     $command = sprintf(
-        'mkdir -p %s && HOME=/tmp XDG_RUNTIME_DIR=/tmp WINEPREFIX=%s WINEDEBUG=-all nohup wine %s %d --flagMessage 1 --delay %d --broker %s --portbroker %d > %s 2>&1 & echo $!',
+        'mkdir -p %s && HOME=/tmp XDG_RUNTIME_DIR=/tmp WINEPREFIX=%s WINEDEBUG=-all nohup wine %s %d %d --flagMessage 1 --delay %d --broker %s --portbroker %d > %s 2>&1 & echo $!',
         escapeshellarg($winePrefix),
         escapeshellarg($winePrefix),
         escapeshellarg($exePath),
         $team,
+        $marsamis,
         $delay,
         escapeshellarg($broker),
         $port,
@@ -502,6 +504,8 @@ try {
                 break;
             }
 
+            $marsamisCount = (int)($data['number_marsamis'] ?? 30);
+
             $stmt = $conn->prepare("CALL sp_create_game(?, ?, ?, ?)");
             $stmt->bind_param("ssii", $requester_email, $data['description'], $team, $player_id);
             $response = handle_sp_result($stmt);
@@ -518,7 +522,7 @@ try {
                 $ownerUpdateStmt->execute();
             }
 
-            $startResult = mqtt_start_simulation($team, $player_id, $simulation_id);
+            $startResult = mqtt_start_simulation($team, $player_id, $simulation_id, $marsamisCount);
             $response['data']['player_id'] = $player_id;
             $response['data']['team'] = $team;
             $response['data']['owner_email'] = $owner_email;
@@ -534,7 +538,7 @@ try {
                 $response['message'] = "Simulation start failed and was rolled back: " . $startResult['message'];
                 $response['data']['rolled_back'] = $cleanupStmt->affected_rows > 0;
             } else {
-                $gameResult = start_mazerun_process($team, $player_id, $simulation_id);
+                $gameResult = start_mazerun_process($team, $player_id, $simulation_id, $marsamisCount);
                 $response['data']['game'] = $gameResult;
 
                 if (!$gameResult['success']) {
@@ -588,7 +592,7 @@ try {
             $sim_id_param = (int)($_GET['simulation_id'] ?? $data['simulation_id'] ?? 0);
             $temps        = $conn->query("SELECT time, temperature as value FROM temperature WHERE simulation_id = $sim_id_param ORDER BY time ASC LIMIT 100")->fetch_all(MYSQLI_ASSOC);
             $sounds       = $conn->query("SELECT time, sound as value FROM sound WHERE simulation_id = $sim_id_param ORDER BY time ASC LIMIT 100")->fetch_all(MYSQLI_ASSOC);
-            $occupations  = $conn->query("SELECT Room as room, oddMarsamis as odd, evenMarsamis as even, (oddMarsamis + evenMarsamis) as total FROM ocupation WHERE id = $sim_id_param ORDER BY Room ASC")->fetch_all(MYSQLI_ASSOC);
+            $occupations  = $conn->query("SELECT Room as room, oddMarsamis as odd, evenMarsamis as even, (oddMarsamis + evenMarsamis) as total FROM ocupation WHERE id = $sim_id_param AND Room <> 0 ORDER BY Room ASC")->fetch_all(MYSQLI_ASSOC);
             $response = ["success" => true, "data" => ["temperature" => $temps, "sound" => $sounds, "occupation" => $occupations]];
             break;
 

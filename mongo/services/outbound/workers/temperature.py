@@ -35,6 +35,7 @@ class TemperatureWorker(BaseWorker):
             "game": doc.get("game", 1),
             "simulation_id": doc.get("simulation_id"),
             "temperature": temp,
+            "room": doc.get("Room", doc.get("room", 0)),
             "timestamp": timestamp.isoformat() if hasattr(timestamp, "isoformat") else str(timestamp)
         }
 
@@ -51,6 +52,7 @@ class TemperatureWorker(BaseWorker):
                     "player": player,
                     "game": doc.get("game", 1),
                     "simulation_id": doc_out["simulation_id"],
+                    "room": doc_out["room"],
                     "sensor": "temperature",
                     "value": temp,
                     "alertType": "HIGH_TEMP",
@@ -72,6 +74,7 @@ class TemperatureWorker(BaseWorker):
                 "player": player,
                 "game": doc.get("game", 1),
                 "simulation_id": doc_out["simulation_id"],
+                "room": doc_out["room"],
                 "sensor": "temperature",
                 "value": temp,
                 "alertType": "HIGH_TEMP",
@@ -91,6 +94,7 @@ class TemperatureWorker(BaseWorker):
                 "player": player,
                 "game": doc.get("game", 1),
                 "simulation_id": doc_out["simulation_id"],
+                "room": doc_out["room"],
                 "sensor": "temperature",
                 "value": temp,
                 "alertType": "LOW_TEMP",

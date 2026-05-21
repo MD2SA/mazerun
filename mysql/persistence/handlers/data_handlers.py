@@ -19,14 +19,14 @@ class InvalidMeasureHandler(BaseHandler):
 class TemperatureHandler(BaseHandler):
     def handle(self, client, payload, dt, sim_id):
         res = self.db_manager.call_sp("sp_insert_temperature", (
-            dt, float(payload["temperature"]), sim_id, payload.get("mongo_id")
+            dt, float(payload["temperature"]), payload.get("room", 0), sim_id, payload.get("mongo_id")
         ))
         if res == 1: self.send_ack(client, payload)
 
 class SoundHandler(BaseHandler):
     def handle(self, client, payload, dt, sim_id):
         res = self.db_manager.call_sp("sp_insert_sound", (
-            dt, float(payload["sound"]), sim_id, payload.get("mongo_id")
+            dt, float(payload["sound"]), payload.get("room", 0), sim_id, payload.get("mongo_id")
         ))
         if res == 1: self.send_ack(client, payload)
 
@@ -64,7 +64,7 @@ class AlertHandler(BaseHandler):
             alert_type = "HIGH_TEMP"
 
         res = self.db_manager.call_sp("sp_insert_alert", (
-            dt, sensor, value, alert_type, alert, sim_id, payload.get("mongo_id")
+            dt, payload.get("room", 0), sensor, value, alert_type, alert, sim_id, payload.get("mongo_id")
         ))
         if res == 1: self.send_ack(client, payload)
 
