@@ -67,7 +67,7 @@ export const api = {
   // Data (protected)
   getAnalytics:   (team)         => request('get_analytics',   { team }),
   getSensorData:  (simId)        => request('get_sensor_data', { simulation_id: simId }),
-  getUnifiedLogs: (simId, limit = 100, team = null) => request('get_unified_logs', { simulation_id: simId, limit, team }),
+  getUnifiedLogs: (simId, limit = 100, team = null, offset = 0) => request('get_unified_logs', { simulation_id: simId, limit, team, offset }),
 
   // Public
   getSystemStatus: () => request('get_status'),
