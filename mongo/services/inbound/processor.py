@@ -63,6 +63,15 @@ class InboundProcessor:
         # Update in-memory cache
         self._active_sessions[player_id] = session
 
+        # Explicitly ensure the database and collection exist
+        try:
+            if "active_sessions" not in self.db.list_collection_names():
+                self.db.create_collection("active_sessions")
+                print("[Inbound] Explicitly created 'active_sessions' collection.")
+        except Exception as e:
+            pass
+
+
         # Upsert into MongoDB 'active_sessions' collection with retries
         import time
         for i in range(5):
