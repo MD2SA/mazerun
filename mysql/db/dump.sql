@@ -70,6 +70,7 @@ CREATE TABLE `simulation` (
   `total_score` INT NOT NULL DEFAULT 0,
   `startDate` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `player_id` int DEFAULT NULL,
+  `total_score` BIGINT NULL,
   PRIMARY KEY (`id`),
   KEY `fk_simulation_user` (`user_email`),
   CONSTRAINT `fk_simulation_user` FOREIGN KEY (`user_email`) REFERENCES `user` (`email`) ON DELETE CASCADE

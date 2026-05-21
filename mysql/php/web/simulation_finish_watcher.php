@@ -60,16 +60,16 @@ function publish_simulation_finished(int $team, int $playerId, int $simulationId
     return true;
 }
 
-function sync_final_score(int $simulationId, int $playerId): void {
+function sync_final_score(int $team, int $simulationId, int $playerId): void {
     try {
         $remote = new mysqli('194.210.86.10', 'aluno', 'aluno', 'maze');
         $remote->set_charset('utf8mb4');
 
-        $stmt = $remote->prepare("SELECT COALESCE(SUM(score), 0) AS total_score FROM roomsscore WHERE playerId = ?");
-        $stmt->bind_param("i", $playerId);
+        $stmt = $remote->prepare("SELECT SUM(score) AS total_score FROM roomsscore WHERE Player = ?");
+        $stmt->bind_param("i", $team);
         $stmt->execute();
         $row = $stmt->get_result()->fetch_assoc();
-        $totalScore = (int)($row['total_score'] ?? 0);
+        $totalScore = $row['total_score']; // may be null if no matching player
         $stmt->close();
         $remote->close();
 
@@ -110,6 +110,5 @@ while (true) {
     sleep(2);
 }
 
-sync_final_score($simulationId, $playerId);
+sync_final_score($team, $simulationId, $playerId);
 publish_simulation_finished($team, $playerId, $simulationId);
-
