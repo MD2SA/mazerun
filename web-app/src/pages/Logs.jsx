@@ -16,7 +16,7 @@ const Logs = () => {
   }, [teamFilter]);
 
   const fetchLogs = async () => {
-    const res = await api.getUnifiedLogs(null); // Filter by team logic inside SP or query
+    const res = await api.getUnifiedLogs(null, 100, teamFilter);
     if (res.success) setLogs(res.data);
     setLoading(false);
   };

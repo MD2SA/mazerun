@@ -33,7 +33,7 @@ const Overview = () => {
     setLoading(true);
     const [statsRes, logsRes] = await Promise.all([
       api.getAnalytics(teamFilter),
-      api.getUnifiedLogs(null, 10)
+      api.getUnifiedLogs(null, 10, teamFilter)
     ]);
 
     if (statsRes.success) setStats(statsRes.data);
