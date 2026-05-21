@@ -1,6 +1,8 @@
 import json
+import ast
 import datetime
 import traceback
+import re
 import paho.mqtt.client as mqtt
 from dateutil import parser as dateutil_parser
 
@@ -39,10 +41,86 @@ class PersistenceApp:
             "pisid_mazeact": ActionHandler(self.db_manager),
         }
 
+    def decode_action_payload(self, raw_text):
+        if not raw_text.startswith("{") or not raw_text.endswith("}"):
+            return None
+
+        payload = {}
+        entries = raw_text[1:-1].split(",")
+        for entry in entries:
+            if ":" not in entry:
+                return None
+
+            key, value = entry.split(":", 1)
+            key = key.strip()
+            value = value.strip()
+
+            if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key):
+                return None
+
+            if re.fullmatch(r"-?\d+", value):
+                payload[key] = int(value)
+            else:
+                payload[key] = value.strip("\"'")
+
+        return payload
+
+    def decode_payload(self, topic, raw_payload):
+        raw_text = raw_payload.decode(errors="replace")
+
+        try:
+            payload = json.loads(raw_text)
+        except json.JSONDecodeError:
+            try:
+                payload = ast.literal_eval(raw_text)
+            except (SyntaxError, ValueError):
+                if topic == "pisid_mazeact":
+                    payload = self.decode_action_payload(raw_text)
+                    if payload is None:
+                        print(f"[App WARNING] Ignoring invalid action payload on {topic}: {raw_text[:200]}")
+                        return None
+                else:
+                    print(f"[App WARNING] Ignoring invalid payload on {topic}: {raw_text[:200]}")
+                    return None
+            else:
+                print(f"[App WARNING] Accepted non-JSON payload on {topic}; publisher should use json.dumps().")
+
+        if not isinstance(payload, dict):
+            print(f"[App WARNING] Ignoring non-object payload on {topic}: {raw_text[:200]}")
+            return None
+
+        return payload
+
+    def find_latest_simulation_id(self, player_id):
+        if player_id is None:
+            return None
+
+        if not self.db_manager.is_connected():
+            if not self.db_manager.connect():
+                return None
+
+        cursor = None
+        try:
+            cursor = self.db_manager.db.cursor()
+            cursor.execute(
+                "SELECT id FROM simulation WHERE player_id = %s AND team = %s ORDER BY id DESC LIMIT 1",
+                (int(player_id), self.config.get("team_id", 25)),
+            )
+            row = cursor.fetchone()
+            return row[0] if row else None
+        except Exception as e:
+            print(f"[App ERROR] Could not resolve simulation for player {player_id}: {e}")
+            return None
+        finally:
+            if cursor:
+                cursor.close()
+
     def on_message(self, client, userdata, msg):
         try:
             topic = msg.topic
-            payload = json.loads(msg.payload.decode())
+            payload = self.decode_payload(topic, msg.payload)
+            if payload is None:
+                return
 
             # 1. Parse Timestamp
             timestamp_str = payload.get("timestamp") or datetime.datetime.now().isoformat()
@@ -57,7 +135,11 @@ class PersistenceApp:
             sim_id = payload.get("simulation_id")
 
             if not sim_id:
-                return
+                if topic == "pisid_mazeact":
+                    sim_id = self.find_latest_simulation_id(payload.get("Player"))
+
+                if not sim_id:
+                    return
 
             # 3. Route to Handler
             handler = self.handlers.get(topic)

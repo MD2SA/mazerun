@@ -16,6 +16,7 @@ from services.outbound.workers.movement import MovementWorker
 from services.outbound.workers.temperature import TemperatureWorker
 from services.outbound.workers.sound import SoundWorker
 from services.outbound.workers.room import RoomWorker
+from services.outbound.workers.alert import AlertWorker
 from services.outbound.workers.retry import RetryWorker
 from services.outbound.workers.ack import AckWorker
 
@@ -69,6 +70,7 @@ def main():
         TemperatureWorker(dispatcher.queues["temperature"], db, mqtt_publisher),
         SoundWorker(dispatcher.queues["sound"], db, mqtt_publisher),
         RoomWorker(dispatcher.queues["rooms"], db, mqtt_publisher),
+        AlertWorker(dispatcher.queues["alerts"], db, mqtt_publisher),
         
         # Maintenance worker (periodic check)
         RetryWorker(db, timeout_seconds=30),

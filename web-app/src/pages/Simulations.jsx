@@ -1,15 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useApp } from '../App';
 import { api } from '../services/api';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, BarChart, Bar
 } from 'recharts';
-import { PlayCircle, Plus, ChevronRight, BarChart2, X, Users as UsersIcon } from 'lucide-react';
+import { PlayCircle, Plus, BarChart2, X } from 'lucide-react';
 
 const SimulationDetails = ({ simulation, onClose }) => {
   const { theme } = useApp();
   const [data, setData] = useState({ temperature: [], sound: [], occupation: [] });
-  const [loading, setLoading] = useState(true);
 
   const chartColors = {
     grid: theme === 'dark' ? '#27272a' : '#e4e4e7',
@@ -20,14 +19,21 @@ const SimulationDetails = ({ simulation, onClose }) => {
   };
 
   useEffect(() => {
-    fetchData();
-  }, [simulation.id]);
+    let cancelled = false;
 
-  const fetchData = async () => {
-    const res = await api.getSensorData(simulation.id);
-    if (res.success) setData(res.data);
-    setLoading(false);
-  };
+    const fetchData = async () => {
+      const res = await api.getSensorData(simulation.id);
+      if (!cancelled && res.success) setData(res.data);
+    };
+
+    fetchData();
+    const refreshInterval = setInterval(fetchData, 2000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(refreshInterval);
+    };
+  }, [simulation.id]);
 
   return (
     <div className="modal-overlay">
@@ -102,26 +108,60 @@ const Simulations = () => {
   const [selectedSim, setSelectedSim] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
   const [editingSim, setEditingSim] = useState(null);
-  const [newSim, setNewSim] = useState({ description: '', team: user.team });
+  const [newSim, setNewSim] = useState({ description: '', team: user.team || '', owner_email: user.email || '' });
+  const [createStatus, setCreateStatus] = useState(null);
+  const [pageStatus, setPageStatus] = useState(null);
+  const [creating, setCreating] = useState(false);
 
-  useEffect(() => {
-    fetchSims();
-  }, [teamFilter]);
-
-  const fetchSims = async () => {
+  const fetchSims = useCallback(async () => {
     const res = await api.getSimulations(teamFilter);
     if (res.success) setSims(res.data);
-  };
+  }, [teamFilter]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadSims = async () => {
+      const res = await api.getSimulations(teamFilter);
+      if (!cancelled && res.success) setSims(res.data);
+    };
+
+    loadSims();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [teamFilter]);
 
   const handleCreate = async (e) => {
     e.preventDefault();
-    const res = await api.createSimulation({ ...newSim, email: user.email });
+    setCreating(true);
+    setCreateStatus(null);
+
+    const res = await api.createSimulation({
+      description: newSim.description.trim(),
+      ...(user.type === 'adm' ? {
+        team: Number(newSim.team),
+        owner_email: newSim.owner_email.trim(),
+      } : {}),
+    });
+
     if (res.success) {
+      setPageStatus({
+        type: 'success',
+        message: res.message || 'Simulation created and started successfully',
+      });
       setShowCreate(false);
+      setNewSim({ description: '', team: user.team || '', owner_email: user.email || '' });
       fetchSims();
     } else {
-      alert(res.message || 'Error creating simulation');
+      setCreateStatus({
+        type: 'error',
+        message: res.message || 'Error creating simulation',
+      });
     }
+
+    setCreating(false);
   };
 
   const handleUpdate = async (e) => {
@@ -137,17 +177,31 @@ const Simulations = () => {
 
   return (
     <div className="animate-fade">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <div>
           <h2 style={{ fontSize: '1.2rem' }}>Available Simulations</h2>
           <p className="text-secondary">Analysis of system runs and sensor logs</p>
         </div>
-        {user.type === 'adm' && (
-          <button onClick={() => setShowCreate(true)} className="btn btn-primary">
-            <Plus size={18} /> New Simulation
-          </button>
-        )}
+        <button onClick={() => { setCreateStatus(null); setPageStatus(null); setShowCreate(true); }} className="btn btn-primary" style={{ fontSize: '0.95rem', padding: '0.8rem 1.2rem' }}>
+          <PlayCircle size={20} /> Create and Start Simulation
+        </button>
       </div>
+
+      {pageStatus && (
+        <div
+          style={{
+            padding: '0.85rem 1rem',
+            borderRadius: '0.5rem',
+            border: `1px solid ${pageStatus.type === 'success' ? 'var(--accent-success)' : 'var(--accent-danger)'}`,
+            color: pageStatus.type === 'success' ? 'var(--accent-success)' : 'var(--accent-danger)',
+            background: pageStatus.type === 'success' ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
+            fontSize: '0.9rem',
+            marginBottom: '1rem',
+          }}
+        >
+          {pageStatus.message}
+        </div>
+      )}
 
       <div className="card" style={{ padding: 0 }}>
         <table className="table">
@@ -158,6 +212,7 @@ const Simulations = () => {
               <th>Team</th>
               <th>Date</th>
               <th>Data Points</th>
+              <th>Total Score</th>
               <th style={{ textAlign: 'right' }}>Actions</th>
             </tr>
           </thead>
@@ -169,6 +224,7 @@ const Simulations = () => {
                 <td><span className="badge badge-usr">T{sim.team}</span></td>
                 <td style={{ color: 'var(--text-secondary)' }}>{new Date(sim.startDate).toLocaleString()}</td>
                 <td>{sim.measures}</td>
+                <td>{sim.total_score ?? '-'}</td>
                 <td style={{ textAlign: 'right' }}>
                   <div className="d-flex justify-content-end gap-2">
                     <button onClick={() => setSelectedSim(sim)} className="btn btn-ghost" style={{ padding: '0.4rem' }}>
@@ -192,8 +248,22 @@ const Simulations = () => {
       {(showCreate || editingSim) && (
         <div className="modal-overlay">
           <div className="card modal-content animate-fade">
-            <h2 style={{ marginBottom: '1.5rem' }}>{showCreate ? 'Create New Simulation' : 'Update Simulation'}</h2>
+            <h2 style={{ marginBottom: '1.5rem' }}>{showCreate ? 'Start New Simulation' : 'Update Simulation'}</h2>
             <form onSubmit={showCreate ? handleCreate : handleUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {showCreate && createStatus && (
+                <div
+                  style={{
+                    padding: '0.85rem 1rem',
+                    borderRadius: '0.5rem',
+                    border: `1px solid ${createStatus.type === 'success' ? 'var(--accent-success)' : 'var(--accent-danger)'}`,
+                    color: createStatus.type === 'success' ? 'var(--accent-success)' : 'var(--accent-danger)',
+                    background: createStatus.type === 'success' ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
+                    fontSize: '0.9rem',
+                  }}
+                >
+                  {createStatus.message}
+                </div>
+              )}
               <div className="input-group">
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Description</label>
                 <input 
@@ -205,19 +275,59 @@ const Simulations = () => {
                   style={{ width: '100%' }}
                 />
               </div>
-              <div className="input-group">
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Team ID</label>
-                <input 
-                  type="number" 
-                  required 
-                  value={showCreate ? newSim.team : editingSim.team}
-                  onChange={(e) => showCreate ? setNewSim({ ...newSim, team: e.target.value }) : setEditingSim({ ...editingSim, team: e.target.value })}
-                  style={{ width: '100%' }}
-                />
-              </div>
+              {showCreate ? (
+                <>
+                  {user.type === 'adm' && (
+                    <>
+                      <div className="input-group">
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Team ID</label>
+                        <input
+                          type="number"
+                          required
+                          min="1"
+                          value={newSim.team}
+                          onChange={(e) => setNewSim({ ...newSim, team: e.target.value })}
+                          style={{ width: '100%' }}
+                        />
+                      </div>
+                      <div className="input-group">
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Owner Email</label>
+                        <input
+                          type="email"
+                          required
+                          value={newSim.owner_email}
+                          onChange={(e) => setNewSim({ ...newSim, owner_email: e.target.value })}
+                          placeholder="user@example.com"
+                          style={{ width: '100%' }}
+                        />
+                      </div>
+                    </>
+                  )}
+                </>
+              ) : (
+                <div className="input-group">
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Team ID</label>
+                  <input 
+                    type="number" 
+                    required 
+                    value={editingSim.team}
+                    onChange={(e) => setEditingSim({ ...editingSim, team: e.target.value })}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+              )}
               <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                <button type="button" onClick={() => { setShowCreate(false); setEditingSim(null); }} className="btn btn-ghost flex-1">Cancel</button>
-                <button type="submit" className="btn btn-primary flex-1">{showCreate ? 'Create' : 'Update'}</button>
+                <button
+                  type="button"
+                  onClick={() => { setShowCreate(false); setEditingSim(null); setCreateStatus(null); }}
+                  className="btn btn-ghost flex-1"
+                  disabled={creating}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary flex-1" disabled={creating}>
+                  {showCreate ? (creating ? 'Starting...' : 'Start') : 'Update'}
+                </button>
               </div>
             </form>
           </div>

@@ -9,27 +9,18 @@ class RoomWorker(BaseWorker):
         room_id = doc.get("room_id")
         sim_id = doc.get("simulation_id")
 
-        # Room doc processing: query odd/even marsamis in this room for this simulation
-        pipeline = [
-            {"$match": {"RoomDestiny": room_id, "simulation_id": sim_id}},
-            {"$group": {
-                "_id": {"marsami": "$Marsami"},
-                "count": {"$sum": 1}
-            }}
-        ]
-
-        results = list(self.db["moves"].aggregate(pipeline))
-
+        # Calculate counts in real-time from the current_marsamis list
+        current_ids = doc.get("current_marsamis", [])
         odd_count = 0
         even_count = 0
-
-        for r in results:
-            marsami_id = r["_id"]["marsami"]
-            if marsami_id is not None:
-                if int(marsami_id) % 2 == 0:
-                    even_count += 1
-                else:
-                    odd_count += 1
+        for mid in current_ids:
+            try:
+                if mid is not None:
+                    if int(mid) % 2 == 0:
+                        even_count += 1
+                    else:
+                        odd_count += 1
+            except: pass
 
         doc_out = {
             "mongo_id": str(doc["_id"]),
@@ -47,6 +38,7 @@ class RoomWorker(BaseWorker):
             action_payload = {
                 "command": "score",
                 "game": doc.get("game", 1),
+                "simulation_id": sim_id,
                 "room": room_id,
                 "reason": "odd_equals_even"
             }
@@ -54,10 +46,15 @@ class RoomWorker(BaseWorker):
             self.mqtt_client.client.publish("actuator/score", json.dumps(action_payload))
             
             action_copy = action_payload.copy()
-            action_copy["mongo_id"] = f"{doc_out['mongo_id']}_alert"
             action_copy["collection"] = doc_out["collection"]
             action_copy["simulation_id"] = sim_id
-            self.mqtt_client.client.publish(f"{self.topic_prefix}/message", json.dumps(action_copy))
+            action_copy["process_status"] = "pending"
+            # In room.py, action_payload already has 'command', 'room', etc. 
+            # We must set timestamp and sensor because AlertWorker expects it.
+            action_copy["sensor"] = "room_score"
+            action_copy["timestamp"] = doc_out["timestamp"]
+            
+            self.db["alerts"].insert_one(action_copy)
 
             doc_out["scored"] = True
 
