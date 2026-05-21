@@ -78,6 +78,7 @@ class SoundWorker(BaseWorker):
             "game": doc.get("game", 1),
             "simulation_id": doc.get("simulation_id"),
             "sound": sound,
+            "room": doc.get("Room", doc.get("room", 0)),
             "movements_window": movements,
             "timestamp": timestamp.isoformat()
         }
@@ -107,6 +108,7 @@ class SoundWorker(BaseWorker):
                 "player": player,
                 "game": doc.get("game", 1),
                 "simulation_id": doc_out["simulation_id"],
+                "room": doc_out["room"],
                 "sensor": "sound",
                 "value": sound,
                 "alertType": "HIGH_SOUND",

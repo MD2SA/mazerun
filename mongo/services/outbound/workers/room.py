@@ -9,18 +9,17 @@ class RoomWorker(BaseWorker):
         room_id = doc.get("room_id")
         sim_id = doc.get("simulation_id")
 
-        # Calculate counts in real-time from the current_marsamis list
-        current_ids = doc.get("current_marsamis", [])
+        # Deduplicate and ensure integer type to prevent double-counting due to type mismatch
+        raw_ids = doc.get("current_marsamis", [])
+        unique_ids = {int(mid) for mid in raw_ids if mid is not None}
+
         odd_count = 0
         even_count = 0
-        for mid in current_ids:
-            try:
-                if mid is not None:
-                    if int(mid) % 2 == 0:
-                        even_count += 1
-                    else:
-                        odd_count += 1
-            except: pass
+        for mid in unique_ids:
+            if mid % 2 == 0:
+                even_count += 1
+            else:
+                odd_count += 1
 
         doc_out = {
             "mongo_id": str(doc["_id"]),

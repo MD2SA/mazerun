@@ -83,7 +83,7 @@ const Header = ({ user, teamFilter, setTeamFilter, theme, toggleTheme }) => {
       <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
         {user.type === 'adm' && (
           <div className="d-flex align-items-center gap-2">
-            <Globe size={16} color="var(--text-secondary)" />
+            <Globe size={16} color="var(--text-secondary)" style={{ marginRight: '10px' }}/>
             <select
               value={teamFilter || ''}
               onChange={(e) => setTeamFilter(e.target.value ? parseInt(e.target.value) : null)}

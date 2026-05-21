@@ -43,7 +43,7 @@ END //
 
 DROP PROCEDURE IF EXISTS sp_insert_temperature //
 CREATE PROCEDURE sp_insert_temperature(
-    IN p_time TIMESTAMP, IN p_temperature DECIMAL(5,2), IN p_simulation_id INT,
+    IN p_time TIMESTAMP, IN p_temperature DECIMAL(5,2), IN p_room INT, IN p_simulation_id INT,
     IN p_mongo_id VARCHAR(50)
 )
 BEGIN
@@ -51,7 +51,7 @@ BEGIN
         BEGIN END;
     ELSE
         INSERT INTO temperature (time, temperature, room, simulation_id) 
-        VALUES (p_time, p_temperature, 0, p_simulation_id);
+        VALUES (p_time, p_temperature, p_room, p_simulation_id);
         
         IF p_mongo_id IS NOT NULL THEN
             INSERT IGNORE INTO processed_event (mongo_id) VALUES (p_mongo_id);
@@ -62,7 +62,7 @@ END //
 
 DROP PROCEDURE IF EXISTS sp_insert_sound //
 CREATE PROCEDURE sp_insert_sound(
-    IN p_time TIMESTAMP, IN p_sound DECIMAL(5,2), IN p_simulation_id INT,
+    IN p_time TIMESTAMP, IN p_sound DECIMAL(5,2), IN p_room INT, IN p_simulation_id INT,
     IN p_mongo_id VARCHAR(50)
 )
 BEGIN
@@ -70,7 +70,7 @@ BEGIN
         BEGIN END;
     ELSE
         INSERT INTO sound (time, sound, room, simulation_id) 
-        VALUES (p_time, p_sound, 0, p_simulation_id);
+        VALUES (p_time, p_sound, p_room, p_simulation_id);
         
         IF p_mongo_id IS NOT NULL THEN
             INSERT IGNORE INTO processed_event (mongo_id) VALUES (p_mongo_id);
@@ -101,7 +101,7 @@ END //
 
 DROP PROCEDURE IF EXISTS sp_insert_alert //
 CREATE PROCEDURE sp_insert_alert(
-    IN p_time TIMESTAMP, IN p_sensor ENUM('1','2'), IN p_value DECIMAL(10,2),
+    IN p_time TIMESTAMP, IN p_room INT, IN p_sensor ENUM('1','2'), IN p_value DECIMAL(10,2),
     IN p_alertType ENUM('SCORE','HIGH_TEMP','LOW_TEMP','HIGH_SOUND'), IN p_description VARCHAR(100), IN p_simulation_id INT,
     IN p_mongo_id VARCHAR(50)
 )
@@ -111,7 +111,7 @@ BEGIN
         BEGIN END;
     ELSE
         INSERT INTO alert (time, room, sensor, reading, alertType, msg, insertTime, simulation_id)
-        VALUES (p_time, 0, p_sensor, p_value, p_alertType, p_description, NOW(), p_simulation_id);
+        VALUES (p_time, p_room, p_sensor, p_value, p_alertType, p_description, NOW(), p_simulation_id);
         
         IF p_mongo_id IS NOT NULL THEN
             INSERT IGNORE INTO processed_event (mongo_id) VALUES (p_mongo_id);
@@ -126,21 +126,21 @@ CREATE PROCEDURE sp_update_ocupation(
     IN p_mongo_id VARCHAR(50)
 )
 BEGIN
-    -- Idempotency check
-    IF p_mongo_id IS NOT NULL AND EXISTS (SELECT 1 FROM processed_event WHERE mongo_id = p_mongo_id) THEN
-        BEGIN END;
+    -- Occupation is stateful. We always want the latest value.
+    -- We don't use the processed_event idempotency check here because p_mongo_id
+    -- is the Room document ID, which is static.
+    IF EXISTS (SELECT 1 FROM ocupation WHERE Room = p_room AND id = p_simulation_id) THEN
+        UPDATE ocupation SET oddMarsamis = p_odd, evenMarsamis = p_even WHERE Room = p_room AND id = p_simulation_id;
     ELSE
-        IF EXISTS (SELECT 1 FROM ocupation WHERE Room = p_room AND id = p_simulation_id) THEN
-            UPDATE ocupation SET oddMarsamis = p_odd, evenMarsamis = p_even WHERE Room = p_room AND id = p_simulation_id;
-        ELSE
-            INSERT INTO ocupation (oddMarsamis, evenMarsamis, Room, id) 
-            VALUES (p_odd, p_even, p_room, p_simulation_id);
-        END IF;
-
-        IF p_mongo_id IS NOT NULL THEN
-            INSERT IGNORE INTO processed_event (mongo_id) VALUES (p_mongo_id);
-        END IF;
+        INSERT INTO ocupation (oddMarsamis, evenMarsamis, Room, id)
+        VALUES (p_odd, p_even, p_room, p_simulation_id);
     END IF;
+
+    -- We still record it if a mongo_id was provided, but we don't block on it.
+    IF p_mongo_id IS NOT NULL THEN
+        INSERT IGNORE INTO processed_event (mongo_id) VALUES (p_mongo_id);
+    END IF;
+
     SELECT 1;
 END //
 

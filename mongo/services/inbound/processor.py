@@ -243,11 +243,13 @@ class InboundProcessor:
             except: pass
             simulation_id = payload.get("simulation_id")
             handshake_id = payload.get("handshake_id")
+            number_marsamis = payload.get("numbermarsamis")
         elif isinstance(payload, int):
             print(f"[Inbound WARNING] game/start received raw integer: {payload}. Missing simulation_id.")
             player_id = payload
             simulation_id = None
             handshake_id = None
+            number_marsamis = None
         else:
             print(f"[Inbound ERROR] game/start received invalid payload: {payload} (Type: {type(payload)})")
             return
@@ -264,6 +266,11 @@ class InboundProcessor:
         )
 
         if self.simulation_configs:
+            # If the payload explicitly includes the number of marsamis, save it to the config repo
+            if number_marsamis is not None:
+                self.simulation_configs.save(simulation_id, {"numbermarsamis": number_marsamis})
+                print(f"[Inbound] Saved numbermarsamis={number_marsamis} to config repo from handshake.")
+
             config = self.simulation_configs.get_or_fetch(simulation_id)
             if config:
                 print(
@@ -389,12 +396,38 @@ class InboundProcessor:
         if not isinstance(raw, dict):
             return
 
-        origin = raw.get("RoomOrigin")
-        destiny = raw.get("RoomDestiny")
-        marsami_id = raw.get("Marsami")
+        # Ensure consistent types to avoid duplicates in current_marsamis sets
+        try:
+            origin = int(raw.get("RoomOrigin")) if raw.get("RoomOrigin") is not None else None
+            destiny = int(raw.get("RoomDestiny")) if raw.get("RoomDestiny") is not None else None
+            marsami_id = int(raw.get("Marsami")) if raw.get("Marsami") is not None else None
+        except (ValueError, TypeError):
+            return
 
+        if marsami_id is None:
+            return
 
-        # Isolation key: room + simulation
+        # --- Self-Healing Logic ---
+        # Ensure a marsami is removed from any OTHER room (1-10) before adding to destiny.
+        # This prevents a marsami from being counted twice if messages arrive out of order.
+        # We exclude Room 0 from this automatic removal to keep it as a static reference
+        # as per user preference (Room 0 = 30 marsamis).
+        self.db["rooms"].update_many(
+            {
+                "simulation_id": simulation_id,
+                "room_id": {"$nin": [0, destiny]},
+                "current_marsamis": marsami_id
+            },
+            {
+                "$pull": {"current_marsamis": marsami_id},
+                "$set": {
+                    "process_status": "pending",
+                    "last_update": datetime.now(timezone.utc),
+                },
+            }
+        )
+
+        # 1. ADD to destiny room
         if destiny is not None:
             self.db["rooms"].update_one(
                 {"room_id": destiny, "simulation_id": simulation_id},
@@ -410,7 +443,9 @@ class InboundProcessor:
                 upsert=True,
             )
 
-        if origin is not None and origin != 0:
+        # 2. REMOVE from origin (Manual pull)
+        # We only pull from origin if it's not Room 0 and not the same as destiny.
+        if origin is not None and origin != 0 and origin != destiny:
             self.db["rooms"].update_one(
                 {"room_id": origin, "simulation_id": simulation_id},
                 {
@@ -421,10 +456,4 @@ class InboundProcessor:
                         "last_update": datetime.now(timezone.utc),
                     },
                 },
-            )
-
-            # Sanity check: ensure count never goes below 0
-            self.db["rooms"].update_one(
-                {"room_id": origin, "simulation_id": simulation_id, "marsami_count": {"$lt": 0}},
-                {"$set": {"marsami_count": 0}}
             )
