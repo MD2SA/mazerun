@@ -601,6 +601,7 @@ try {
             $sim_id_param = (int)($_GET['simulation_id'] ?? $data['simulation_id'] ?? 0);
             $team_param   = (int)($_GET['team'] ?? $data['team'] ?? 0);
             $limit        = (int)($_GET['limit'] ?? $data['limit'] ?? 100);
+            $offset       = (int)($_GET['offset'] ?? $data['offset'] ?? 0);
 
             $where = "1=1";
             if ($sim_id_param > 0) {
@@ -617,7 +618,7 @@ try {
                     (SELECT time, 'INVALID' as type, reason as detail FROM invalid_measure WHERE $where)
                     UNION ALL
                     (SELECT time, 'OUTLIER' as type, reason as detail FROM sound_outlier WHERE simulation_id IN (SELECT id FROM simulation WHERE team = $team_param OR $team_param=0))
-                    ORDER BY time DESC LIMIT $limit";
+                    ORDER BY time DESC LIMIT $limit OFFSET $offset";
 
             $res          = $conn->query($sql);
             $response     = ["success" => true, "data" => $res->fetch_all(MYSQLI_ASSOC)];
