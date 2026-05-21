@@ -212,6 +212,7 @@ const Simulations = () => {
               <th>Team</th>
               <th>Date</th>
               <th>Data Points</th>
+              <th>Total Score</th>
               <th style={{ textAlign: 'right' }}>Actions</th>
             </tr>
           </thead>
@@ -223,6 +224,7 @@ const Simulations = () => {
                 <td><span className="badge badge-usr">T{sim.team}</span></td>
                 <td style={{ color: 'var(--text-secondary)' }}>{new Date(sim.startDate).toLocaleString()}</td>
                 <td>{sim.measures}</td>
+                <td>{sim.total_score ?? '-'}</td>
                 <td style={{ textAlign: 'right' }}>
                   <div className="d-flex justify-content-end gap-2">
                     <button onClick={() => setSelectedSim(sim)} className="btn btn-ghost" style={{ padding: '0.4rem' }}>

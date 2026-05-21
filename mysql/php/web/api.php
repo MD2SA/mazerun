@@ -217,7 +217,7 @@ function mqtt_start_simulation(int $team, int $playerId, int $simulationId): arr
     ];
 }
 
-function start_mazerun_process(int $team, int $simulationId): array {
+function start_mazerun_process(int $team, int $playerId, int $simulationId): array {
     $exePath = getenv('MAZERUN_EXE_PATH') ?: '/game/server/mazerun.exe';
     $broker = getenv('MQTT_BROKER') ?: 'broker.hivemq.com';
     $port = (int)(getenv('MQTT_PORT') ?: 1883);
@@ -272,6 +272,21 @@ function start_mazerun_process(int $team, int $simulationId): array {
             'log_file' => $logFile,
             'log_preview' => $logPreview
         ];
+    }
+
+    $watcherScript = __DIR__ . '/simulation_finish_watcher.php';
+    if (file_exists($watcherScript)) {
+        $watcherLog = "/tmp/mazerun-finish-watcher-$simulationId.log";
+        $watcherCmd = sprintf(
+            'nohup php %s %d %d %d %d > %s 2>&1 &',
+            escapeshellarg($watcherScript),
+            $team,
+            $playerId,
+            $simulationId,
+            $pid,
+            escapeshellarg($watcherLog)
+        );
+        @exec($watcherCmd);
     }
 
     return [
@@ -513,7 +528,7 @@ try {
                 $response['message'] = "Simulation start failed and was rolled back: " . $startResult['message'];
                 $response['data']['rolled_back'] = $cleanupStmt->affected_rows > 0;
             } else {
-                $gameResult = start_mazerun_process($team, $simulation_id);
+                $gameResult = start_mazerun_process($team, $player_id, $simulation_id);
                 $response['data']['game'] = $gameResult;
 
                 if (!$gameResult['success']) {
@@ -541,6 +556,7 @@ try {
         case 'get_simulations':
             $teamFilter = $_GET['team'] ?? $data['team'] ?? null;
             $where      = !empty($teamFilter) ? "WHERE team = " . (int)$teamFilter : "";
+            $conn->query("ALTER TABLE simulation ADD COLUMN IF NOT EXISTS total_score BIGINT NULL");
             $res        = $conn->query("SELECT s.*, (SELECT COUNT(*) FROM measure WHERE simulation_id = s.id) as measures FROM simulation s $where ORDER BY startDate DESC");
             $response   = ["success" => true, "data" => $res->fetch_all(MYSQLI_ASSOC)];
             break;
