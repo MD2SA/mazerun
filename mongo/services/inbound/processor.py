@@ -410,6 +410,11 @@ class InboundProcessor:
         if marsami_id is None:
             return
 
+        # If the origin and destiny are the same, no movement occurred.
+        # This is common for heartbeats (0->0) or status updates.
+        if origin == destiny:
+            return
+
         # If the marsami is tired (status 2), we ignore the movement (usually back to Room 0)
         # to keep the last active room state in the records.
         if status == 2:
