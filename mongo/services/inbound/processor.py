@@ -403,17 +403,23 @@ class InboundProcessor:
             origin = int(raw.get("RoomOrigin")) if raw.get("RoomOrigin") is not None else None
             destiny = int(raw.get("RoomDestiny")) if raw.get("RoomDestiny") is not None else None
             marsami_id = int(raw.get("Marsami")) if raw.get("Marsami") is not None else None
+            status = int(raw.get("Status") or raw.get("status") or 1)
         except (ValueError, TypeError):
             return
 
         if marsami_id is None:
             return
 
+        # If the marsami is tired (status 2), we ignore the movement (usually back to Room 0)
+        # to keep the last active room state in the records.
+        if status == 2:
+            print(f"[Inbound] Marsami {marsami_id} is tired. Preserving its last room position.")
+            return
+
         # --- Self-Healing Logic ---
         # Ensure a marsami is removed from any OTHER room (1-10) before adding to destiny.
         # This prevents a marsami from being counted twice if messages arrive out of order.
-        # We exclude Room 0 from this automatic removal to keep it as a static reference
-        # as per user preference (Room 0 = 30 marsamis).
+        # We exclude Room 0 from this automatic removal to keep it as a static reference.
         self.db["rooms"].update_many(
             {
                 "simulation_id": simulation_id,
