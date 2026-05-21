@@ -19,6 +19,7 @@ async function request(action, params = {}, data = null) {
 
   const token = tokenStore.get();
   const headers = { 'Content-Type': 'application/json' };
+
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
   try {

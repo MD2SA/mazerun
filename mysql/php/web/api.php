@@ -91,7 +91,7 @@ function mqtt_string(string $value): string {
     return pack('n', strlen($value)) . $value;
 }
 
-function mqtt_start_simulation(int $team, int $playerId, int $simulationId, int $marsamis = 30): array {
+function mqtt_start_simulation(int $team, int $playerId, int $simulationId): array {
     $broker = getenv('MQTT_BROKER') ?: 'broker.hivemq.com';
     $port = (int)(getenv('MQTT_PORT') ?: 1883);
     $timeout = (int)(getenv('MQTT_HANDSHAKE_TIMEOUT') ?: 12);
@@ -165,8 +165,7 @@ function mqtt_start_simulation(int $team, int $playerId, int $simulationId, int 
     $payload = json_encode([
         'player_id' => $playerId,
         'simulation_id' => $simulationId,
-        'handshake_id' => $handshakeId,
-        'numbermarsamis' => $marsamis
+        'handshake_id' => $handshakeId
     ]);
     mqtt_write_packet($socket, 3, mqtt_string($topicStart) . $payload);
 
@@ -218,7 +217,7 @@ function mqtt_start_simulation(int $team, int $playerId, int $simulationId, int 
     ];
 }
 
-function start_mazerun_process(int $team, int $playerId, int $simulationId, int $marsamis = 30): array {
+function start_mazerun_process(int $team, int $playerId, int $simulationId): array {
     $exePath = getenv('MAZERUN_EXE_PATH') ?: '/game/server/mazerun.exe';
     $broker = getenv('MQTT_BROKER') ?: 'broker.hivemq.com';
     $port = (int)(getenv('MQTT_PORT') ?: 1883);
@@ -235,12 +234,11 @@ function start_mazerun_process(int $team, int $playerId, int $simulationId, int 
     }
 
     $command = sprintf(
-        'mkdir -p %s && HOME=/tmp XDG_RUNTIME_DIR=/tmp WINEPREFIX=%s WINEDEBUG=-all nohup wine %s %d %d --flagMessage 1 --delay %d --broker %s --portbroker %d > %s 2>&1 & echo $!',
+        'mkdir -p %s && HOME=/tmp XDG_RUNTIME_DIR=/tmp WINEPREFIX=%s WINEDEBUG=-all nohup wine %s %d --flagMessage 1 --delay %d --broker %s --portbroker %d > %s 2>&1 & echo $!',
         escapeshellarg($winePrefix),
         escapeshellarg($winePrefix),
         escapeshellarg($exePath),
         $team,
-        $marsamis,
         $delay,
         escapeshellarg($broker),
         $port,
@@ -504,8 +502,6 @@ try {
                 break;
             }
 
-            $marsamisCount = (int)($data['number_marsamis'] ?? 30);
-
             $stmt = $conn->prepare("CALL sp_create_game(?, ?, ?, ?)");
             $stmt->bind_param("ssii", $requester_email, $data['description'], $team, $player_id);
             $response = handle_sp_result($stmt);
@@ -522,7 +518,7 @@ try {
                 $ownerUpdateStmt->execute();
             }
 
-            $startResult = mqtt_start_simulation($team, $player_id, $simulation_id, $marsamisCount);
+            $startResult = mqtt_start_simulation($team, $player_id, $simulation_id);
             $response['data']['player_id'] = $player_id;
             $response['data']['team'] = $team;
             $response['data']['owner_email'] = $owner_email;
@@ -538,7 +534,7 @@ try {
                 $response['message'] = "Simulation start failed and was rolled back: " . $startResult['message'];
                 $response['data']['rolled_back'] = $cleanupStmt->affected_rows > 0;
             } else {
-                $gameResult = start_mazerun_process($team, $player_id, $simulation_id, $marsamisCount);
+                $gameResult = start_mazerun_process($team, $player_id, $simulation_id);
                 $response['data']['game'] = $gameResult;
 
                 if (!$gameResult['success']) {
@@ -568,6 +564,23 @@ try {
             $where      = !empty($teamFilter) ? "WHERE team = " . (int)$teamFilter : "";
             $res        = $conn->query("SELECT s.*, (SELECT COUNT(*) FROM measure WHERE simulation_id = s.id) as measures FROM simulation s $where ORDER BY startDate DESC");
             $response   = ["success" => true, "data" => $res->fetch_all(MYSQLI_ASSOC)];
+            break;
+        case 'get_simulation_score':
+            $simId = (int)($_GET['simulation_id'] ?? $data['simulation_id'] ?? 0);
+            if ($simId <= 0) {
+                $response = ["success" => false, "message" => "Invalid simulation_id"]; 
+                break;
+            }
+            $stmt = $conn->prepare("SELECT total_score FROM simulation WHERE id = ?");
+            $stmt->bind_param("i", $simId);
+            $stmt->execute();
+            $row = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+            if ($row) {
+                $response = ["success" => true, "data" => $row];
+            } else {
+                $response = ["success" => false, "message" => "Simulation not found"]; 
+            }
             break;
 
         // ── ANALYTICS ─────────────────────────────────────────────────────────
