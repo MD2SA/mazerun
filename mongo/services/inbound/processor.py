@@ -63,6 +63,15 @@ class InboundProcessor:
         # Update in-memory cache
         self._active_sessions[player_id] = session
 
+        # Explicitly ensure the database and collection exist
+        try:
+            if "active_sessions" not in self.db.list_collection_names():
+                self.db.create_collection("active_sessions")
+                print("[Inbound] Explicitly created 'active_sessions' collection.")
+        except Exception as e:
+            pass
+
+
         # Upsert into MongoDB 'active_sessions' collection with retries
         import time
         for i in range(5):
@@ -361,13 +370,6 @@ class InboundProcessor:
         else:
             doc["player_id"] = player_id
             doc["simulation_id"] = None
-            self.db["discarded_events"].insert_one({
-                "collection": collection_name,
-                "payload": doc,
-                "reason": "no_active_session",
-                "player_id": player_id,
-                "discarded_at": datetime.now(timezone.utc),
-            })
             if player_id is not None:
                 print(
                     f"[Inbound WARNING] Discarded '{collection_name}' event: "
