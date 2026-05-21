@@ -1,5 +1,11 @@
 FROM php:8.3-apache
 
+# Install runtime dependencies
+RUN dpkg --add-architecture i386 \
+    && apt-get update \
+    && apt-get install -y wine wine32:i386 \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install MySQL extensions
 RUN docker-php-ext-install mysqli pdo pdo_mysql && docker-php-ext-enable mysqli pdo pdo_mysql
 

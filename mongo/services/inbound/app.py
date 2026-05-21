@@ -6,6 +6,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".
 
 from common.config_loader import load_config
 from common.mongo_connection import get_mongo_db
+from common.simulation_config import SimulationConfigRepository
 from services.inbound.processor import InboundProcessor
 from services.inbound.mqtt_client import InboundMQTTClient
 
@@ -15,6 +16,7 @@ def main():
     
     mqtt_config = config.get("mqtt", {})
     mongo_config = config.get("mongo", {})
+    mysql_config = config.get("mysql", {}).get("consulting", {})
 
     # Prefer MONGO_URI from environment (for Docker), fallback to config
     mongo_uri = os.environ.get("MONGO_URI") or mongo_config.get("uri", "mongodb://localhost:27017")
@@ -25,7 +27,8 @@ def main():
     )
 
     team_id = config.get("team_id", 25)
-    processor = InboundProcessor(db, team_id=team_id)
+    simulation_configs = SimulationConfigRepository(db, mysql_config)
+    processor = InboundProcessor(db, team_id=team_id, simulation_configs=simulation_configs)
     
     # Filter topics: only those that provide raw sensor data
     # We avoid "processed/" topics to prevent loops
@@ -42,10 +45,13 @@ def main():
     # We use a team-specific topic to avoid collisions on public brokers
     team_id = config.get("team_id", 25)
     topic_start = f"pisid/{team_id}/game/start"
+    topic_finished = f"pisid/{team_id}/simulation/finished"
     print(f"[Inbound] Configuring for Team {team_id}. Handshake Topic: {topic_start}")
     
     if topic_start not in data_topics:
         data_topics.append(topic_start)
+    if topic_finished not in data_topics:
+        data_topics.append(topic_finished)
 
     print(f"[Inbound] Subscribing to topics: {data_topics}")
 
