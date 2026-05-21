@@ -354,13 +354,6 @@ class InboundProcessor:
         else:
             doc["player_id"] = player_id
             doc["simulation_id"] = None
-            self.db["discarded_events"].insert_one({
-                "collection": collection_name,
-                "payload": doc,
-                "reason": "no_active_session",
-                "player_id": player_id,
-                "discarded_at": datetime.now(timezone.utc),
-            })
             if player_id is not None:
                 print(
                     f"[Inbound WARNING] Discarded '{collection_name}' event: "
