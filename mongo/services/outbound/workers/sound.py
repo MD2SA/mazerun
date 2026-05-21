@@ -10,6 +10,8 @@ class SoundWorker(BaseWorker):
     def __init__(self, queue, db, mqtt_client):
         super().__init__(queue, db, mqtt_client, "sound")
         self.player_state = {}
+        self.delta_t_seconds = constants.TEMP_ANTI_SPAM_SECONDS # Reuse global constant
+        self.last_alert_time = {}
         self.actuator = ActuatorService(mqtt_client)
         self.config_cache = SimulationConfigCache(db)
 
@@ -27,11 +29,13 @@ class SoundWorker(BaseWorker):
 
         timestamp_raw = doc.get("Hour") or doc.get("timestamp")
         timestamp = pd.to_datetime(timestamp_raw).to_pydatetime()
+        simulation_id = doc.get("simulation_id")
 
         ten_secs_ago = timestamp - timedelta(seconds=constants.SOUND_MOVEMENT_WINDOW_SECONDS)
 
         movements = self.db["moves"].count_documents({
             "Player": player,
+            "simulation_id": simulation_id,
             "timestamp": {"$gte": ten_secs_ago.isoformat(), "$lte": timestamp.isoformat()}
         })
 
@@ -101,21 +105,25 @@ class SoundWorker(BaseWorker):
             print(f"[SoundWorker] Sound approaching limit ({sound}). Closing all doors for Player {player}")
             self.actuator.close_all_doors(player, doc_out["simulation_id"])
 
-            # Send System Alert
-            # Store System Alert in MongoDB for guaranteed delivery
-            self.db["alerts"].insert_one({
-                "collection": doc_out["collection"],
-                "player": player,
-                "game": doc.get("game", 1),
-                "simulation_id": doc_out["simulation_id"],
-                "room": doc_out["room"],
-                "sensor": "sound",
-                "value": sound,
-                "alertType": "HIGH_SOUND",
-                "alert": f"High sound level detected ({sound} dB)",
-                "timestamp": doc_out["timestamp"],
-                "process_status": "pending"
-            })
+            # Send System Alert with throttling
+            current_time = pd.to_datetime(timestamp)
+            last_alert = self.last_alert_time.get(player)
+            if not last_alert or (current_time - last_alert).total_seconds() > self.delta_t_seconds:
+                # Store System Alert in MongoDB for guaranteed delivery
+                self.db["alerts"].insert_one({
+                    "collection": doc_out["collection"],
+                    "player": player,
+                    "game": doc.get("game", 1),
+                    "simulation_id": doc_out["simulation_id"],
+                    "room": doc_out["room"],
+                    "sensor": "sound",
+                    "value": sound,
+                    "alertType": "HIGH_SOUND",
+                    "alert": f"High sound level detected ({sound} dB)",
+                    "timestamp": doc_out["timestamp"],
+                    "process_status": "pending"
+                })
+                self.last_alert_time[player] = current_time
         else:
             baseline = normal_noise if normal_noise is not None else (constants.ACTUATOR_SOUND_HIGH - 10)
             if sound <= baseline:

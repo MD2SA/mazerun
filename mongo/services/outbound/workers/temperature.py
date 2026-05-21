@@ -40,12 +40,13 @@ class TemperatureWorker(BaseWorker):
         }
 
         high_threshold, low_threshold = self._thresholds_for(doc.get("simulation_id"))
+        current_time = pd.to_datetime(timestamp)
+        last_alert = self.last_alert_time.get(player)
+        can_alert = not last_alert or (current_time - last_alert).total_seconds() > self.delta_t_seconds
 
-        # 1. Standard alert logic (to processed/message)
+        # 1. Standard alert logic & Actuator Logic: AC Control
         if temp >= high_threshold:
-            current_time = pd.to_datetime(timestamp)
-            last_alert = self.last_alert_time.get(player)
-            if not last_alert or (current_time - last_alert).total_seconds() > self.delta_t_seconds:
+            if can_alert:
                 # Store System Alert in MongoDB for guaranteed delivery
                 self.db["alerts"].insert_one({
                     "collection": doc_out["collection"],
@@ -56,52 +57,35 @@ class TemperatureWorker(BaseWorker):
                     "sensor": "temperature",
                     "value": temp,
                     "alertType": "HIGH_TEMP",
-                    "alert": f"High temperature detected ({temp})",
+                    "alert": f"High temperature detected ({temp}°C). AC ON.",
                     "timestamp": doc_out["timestamp"],
                     "process_status": "pending"
                 })
                 self.last_alert_time[player] = current_time
 
-        # 2. Actuator Logic: AC Control
-        if temp >= high_threshold:
             print(f"[TemperatureWorker] High temp ({temp}). Turning ON AC for Player {player}")
             self.actuator.ac_on(player, doc_out["simulation_id"])
 
-            # Send System Alert for high temp if above threshold
-            # Store System Alert in MongoDB for guaranteed delivery
-            self.db["alerts"].insert_one({
-                "collection": doc_out["collection"],
-                "player": player,
-                "game": doc.get("game", 1),
-                "simulation_id": doc_out["simulation_id"],
-                "room": doc_out["room"],
-                "sensor": "temperature",
-                "value": temp,
-                "alertType": "HIGH_TEMP",
-                "alert": f"High temperature detected ({temp}°C). AC ON.",
-                "timestamp": doc_out["timestamp"],
-                "process_status": "pending"
-            })
-
         elif temp <= low_threshold:
+            if can_alert:
+                # Store System Alert in MongoDB for guaranteed delivery
+                self.db["alerts"].insert_one({
+                    "collection": doc_out["collection"],
+                    "player": player,
+                    "game": doc.get("game", 1),
+                    "simulation_id": doc_out["simulation_id"],
+                    "room": doc_out["room"],
+                    "sensor": "temperature",
+                    "value": temp,
+                    "alertType": "LOW_TEMP",
+                    "alert": f"Low temperature detected ({temp}°C). AC OFF.",
+                    "timestamp": doc_out["timestamp"],
+                    "process_status": "pending"
+                })
+                self.last_alert_time[player] = current_time
+
             print(f"[TemperatureWorker] Low temp ({temp}). Turning OFF AC for Player {player}")
             self.actuator.ac_off(player, doc_out["simulation_id"])
-
-            # Send System Alert for low temp
-            # Store System Alert in MongoDB for guaranteed delivery
-            self.db["alerts"].insert_one({
-                "collection": doc_out["collection"],
-                "player": player,
-                "game": doc.get("game", 1),
-                "simulation_id": doc_out["simulation_id"],
-                "room": doc_out["room"],
-                "sensor": "temperature",
-                "value": temp,
-                "alertType": "LOW_TEMP",
-                "alert": f"Low temperature detected ({temp}°C). AC OFF.",
-                "timestamp": doc_out["timestamp"],
-                "process_status": "pending"
-            })
 
         # 3. Emergency Safety: Close all doors if temperature is critical
         if hasattr(constants, 'TEMP_SAFETY_LIMIT') and temp >= constants.TEMP_SAFETY_LIMIT:
