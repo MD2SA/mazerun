@@ -45,10 +45,13 @@ def main():
     # We use a team-specific topic to avoid collisions on public brokers
     team_id = config.get("team_id", 25)
     topic_start = f"pisid/{team_id}/game/start"
+    topic_finished = f"pisid/{team_id}/simulation/finished"
     print(f"[Inbound] Configuring for Team {team_id}. Handshake Topic: {topic_start}")
     
     if topic_start not in data_topics:
         data_topics.append(topic_start)
+    if topic_finished not in data_topics:
+        data_topics.append(topic_finished)
 
     print(f"[Inbound] Subscribing to topics: {data_topics}")
 
