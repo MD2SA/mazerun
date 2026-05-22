@@ -81,8 +81,8 @@ class ActuatorService:
         self._publish(payload)
 
     def close_all_doors(self, player, simulation_id=None):
-        """Close all doors – limit 2 calls per minute per player."""
-        if not self._allow(player, "CloseAllDoor", simulation_id, limit=2):
+        """Close all doors – limit 3 calls per simulation."""
+        if not self._allow(player, "CloseAllDoor", simulation_id, limit=3):
             print(f"[Actuator] CloseAllDoor rate‑limited for player {player}")
             return
         payload = {"Type": "CloseAllDoor", "Player": player}
