@@ -56,44 +56,35 @@ class ActuatorService:
     # Public actuator methods – each uses rate limiting as appropriate
     # ---------------------------------------------------------------------
     def send_score(self, player, room, simulation_id=None):
+        """Send a score – limit 3 sends per room per simulation."""
+        # Use room as identifier for rate limiting
+        if not self._allow(player, "SendScore", simulation_id, limit=3, identifier=str(room)):
+            print(f"[Actuator] SendScore rate‑limited for player {player} in room {room}")
+            return
         payload = {"Type": "Score", "Player": player, "Room": room}
         self._add_simulation_id(payload, simulation_id)
         self._publish(payload)
 
     def open_door(self, player, origin, destiny, simulation_id=None):
-        """Open a specific door – limit 3 opens per door per simulation."""
-        corridor_id = f"{origin}-{destiny}"
-        if not self._allow(player, "OpenDoor", simulation_id, limit=3, identifier=corridor_id):
-            print(f"[Actuator] OpenDoor rate‑limited for player {player} on corridor {corridor_id}")
-            return
+        """Open a specific door – no rate limit."""
         payload = {"Type": "OpenDoor", "Player": player, "RoomOrigin": origin, "RoomDestiny": destiny}
         self._add_simulation_id(payload, simulation_id)
         self._publish(payload)
 
     def close_door(self, player, origin, destiny, simulation_id=None):
-        """Close a specific door – limit 3 closes per corridor per simulation."""
-        corridor_id = f"{origin}-{destiny}"
-        if not self._allow(player, "CloseDoor", simulation_id, limit=3, identifier=corridor_id):
-            print(f"[Actuator] CloseDoor rate‑limited for player {player} on corridor {corridor_id}")
-            return
+        """Close a specific door – no rate limit."""
         payload = {"Type": "CloseDoor", "Player": player, "RoomOrigin": origin, "RoomDestiny": destiny}
         self._add_simulation_id(payload, simulation_id)
         self._publish(payload)
 
     def close_all_doors(self, player, simulation_id=None):
-        """Close all doors – limit 3 calls per simulation."""
-        if not self._allow(player, "CloseAllDoor", simulation_id, limit=3):
-            print(f"[Actuator] CloseAllDoor rate‑limited for player {player}")
-            return
+        """Close all doors – no rate limit."""
         payload = {"Type": "CloseAllDoor", "Player": player}
         self._add_simulation_id(payload, simulation_id)
         self._publish(payload)
 
     def open_all_doors(self, player, simulation_id=None):
-        """Open all doors – limit 2 calls per minute per player."""
-        if not self._allow(player, "OpenAllDoor", simulation_id, limit=2):
-            print(f"[Actuator] OpenAllDoor rate‑limited for player {player}")
-            return
+        """Open all doors – no rate limit."""
         payload = {"Type": "OpenAllDoor", "Player": player}
         self._add_simulation_id(payload, simulation_id)
         self._publish(payload)
