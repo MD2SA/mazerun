@@ -67,7 +67,7 @@ CREATE TABLE `simulation` (
   `description` text NOT NULL,
   `team` int NOT NULL,
   `user_email` varchar(50) DEFAULT NULL,
-  `total_score` INT NOT NULL DEFAULT 0,
+
   `startDate` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `player_id` int DEFAULT NULL,
   `total_score` BIGINT NULL,
