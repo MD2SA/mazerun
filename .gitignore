@@ -1,9 +1,9 @@
-game/**
-
+# Local runtime / generated artifacts
+game/
+analytics/
+_internals/
 persistence_session.log
 mongo/resume_token.json
-analytics/
-_internal
 
 # Python
 __pycache__/
@@ -12,6 +12,17 @@ __pycache__/
 venv/
 .venv/
 *.log
+
+# Node
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Environment files
+.env
+.env.*
+!.env.example
 
 # Android
 android/.gradle/
@@ -27,9 +38,7 @@ android/.idea/
 android/**/*.iml
 android/app/build/
 
- 
-# IDE
+# IDE / OS
 .idea/
-
-# Node
-node_modules/
+.vscode/
+.DS_Store
