@@ -1,21 +1,21 @@
 team_id: 25
 # Internal topics for isolation on public brokers
 mqtt:
-  broker: "broker.hivemq.com"
+  broker: "${MQTT_BROKER:-broker.hivemq.com}"
   port: 1883
   internal_prefix: "pisid/25/processed"
   ack_topic: "pisid/25/persistence/ack"
 
 mysql:
   consulting:
-    host: "consulting-db.example.edu"
+    host: "${CONSULTING_DB_HOST:-consulting-db.example.edu}"
     port: 3306
-    user: "REDACTED"
-    password: "REDACTED"
-    db: "maze"
+    user: "${CONSULTING_DB_USER:-}"
+    password: "${CONSULTING_DB_PASSWORD:-}"
+    db: "${CONSULTING_DB_NAME:-maze}"
   saving:
-    host: "localhost"
+    host: "${MYSQL_HOST:-localhost}"
     port: 3306
-    user: "root"
-    password: "REDACTED"
-    db: "mazerun"
+    user: "${MYSQL_USER:-root}"
+    password: "${MYSQL_PASSWORD:-}"
+    db: "${MYSQL_DATABASE:-mazerun}"

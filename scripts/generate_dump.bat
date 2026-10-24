@@ -1,36 +1,31 @@
 @echo off
-setlocal EnableDelayedExpansion
+setlocal EnableExtensions EnableDelayedExpansion
 
-set CONTAINER=mysql
+set SCRIPT_DIR=%~dp0
+set REPO_ROOT=%SCRIPT_DIR%..
+set CONTAINER=mazerun-mysql-db
 set DB=mazerun
 set USER=root
-set PASSWORD=REDACTED
-set CONTAINER_OUT=/backup/dump.sql
+set PASSWORD=%MYSQL_ROOT_PASSWORD%
+if "%PASSWORD%"=="" (
+    echo MYSQL_ROOT_PASSWORD is not set. Add it to mysql\.env or export it.
+    exit /b 1
+)
+set HOST_OUT=%REPO_ROOT%\mysql\db\dump.sql
+
+if not exist "%REPO_ROOT%\mysql\db" mkdir "%REPO_ROOT%\mysql\db"
 
 echo Creating full dump of database '%DB%' ...
-
-docker exec %CONTAINER% ^
-    bash -c "mysqldump -u%USER% -p%PASSWORD% ^
-        --single-transaction ^
-        --routines --triggers --events ^
-        --set-gtid-purged=OFF ^
-        --databases %DB% --add-drop-database --add-drop-table ^
-        > %CONTAINER_OUT%" 2^>^&1 | findstr /V "insecure" 1^>^&2
+docker exec -e MYSQL_PWD=%PASSWORD% %CONTAINER% mysqldump -u%USER% --single-transaction --routines --triggers --events --set-gtid-purged=OFF --databases %DB% --add-drop-database --add-drop-table > "%HOST_OUT%"
 
 if %ERRORLEVEL% EQU 0 (
-    echo Done!
-    echo File created inside container   ^> %CONTAINER_OUT%
-    echo On your host computer it appears ^> .\dbs\mysql\dump.sql
-    if exist ".\dbs\mysql\dump.sql" (
-        dir ".\dbs\mysql\dump.sql"
-    ) else (
-        echo (check if the folder exists)
-    )
+    echo Done: %HOST_OUT%
+    dir "%HOST_OUT%"
 ) else (
     echo Error while running mysqldump. Please check:
-    echo  • Is container '%CONTAINER%' running?
-    echo  • Is the password correct?
-    echo  • Does database '%DB%' exist?
+    echo  - Is container '%CONTAINER%' running?
+    echo  - Is MYSQL_ROOT_PASSWORD correct?
+    echo  - Does database '%DB%' exist?
 )
 
 echo.

@@ -1,9 +1,12 @@
 USE mazerun;
+-- Development bootstrap only. Replace these placeholder passwords before any
+-- shared deployment. The application itself connects with the MYSQL_* values
+-- from mysql/.env, not with these users.
 -- 1. Creates the users
-CREATE USER IF NOT EXISTS 'adm_user'@'%' IDENTIFIED BY 'REDACTED';
-CREATE USER IF NOT EXISTS 'migrator_user'@'%' IDENTIFIED BY 'REDACTED';
-CREATE USER IF NOT EXISTS 'operational_user'@'%' IDENTIFIED BY 'REDACTED';
-CREATE USER IF NOT EXISTS 'app_user'@'%' IDENTIFIED BY 'REDACTED';
+CREATE USER IF NOT EXISTS 'adm_user'@'%' IDENTIFIED BY 'CHANGE_ME_ADM';
+CREATE USER IF NOT EXISTS 'migrator_user'@'%' IDENTIFIED BY 'CHANGE_ME_MIGRATOR';
+CREATE USER IF NOT EXISTS 'operational_user'@'%' IDENTIFIED BY 'CHANGE_ME_OPERATIONAL';
+CREATE USER IF NOT EXISTS 'app_user'@'%' IDENTIFIED BY 'CHANGE_ME_APP';
 
 -- 2. Admin privileges
 GRANT SELECT, UPDATE, DELETE ON mazerun.user TO 'adm_user'@'%';

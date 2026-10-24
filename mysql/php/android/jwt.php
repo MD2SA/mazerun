@@ -4,7 +4,11 @@
  * Shared between web and android.
  */
 
-define('JWT_SECRET', getenv('JWT_SECRET') ?: 'REDACTED_JWT_SECRET');
+$jwtSecret = getenv('JWT_SECRET');
+if ($jwtSecret === false || $jwtSecret === '') {
+    throw new RuntimeException('JWT_SECRET environment variable is required');
+}
+define('JWT_SECRET', $jwtSecret);
 define('JWT_TTL', 60 * 60 * 8); // 8 hours
 
 function jwt_encode(array $payload): string {

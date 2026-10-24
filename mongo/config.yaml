@@ -1,6 +1,6 @@
 team_id: 25
 mqtt:
-  broker: "broker.hivemq.com"
+  broker: "${MQTT_BROKER:-broker.hivemq.com}"
   port: 1883
   # 25 is the number of our group
   topics:
@@ -13,13 +13,13 @@ mqtt:
   ack_topic: "pisid/25/persistence/ack"
 
 mongo:
-  uri: "mongodb://localhost:27017"
+  uri: "${MONGO_URI:-mongodb://localhost:27017}"
   db: "game"
 
 mysql:
   consulting:
-    host: "consulting-db.example.edu"
+    host: "${CONSULTING_DB_HOST:-consulting-db.example.edu}"
     port: 3306
-    user: "REDACTED"
-    password: "REDACTED"
-    db: "maze"
+    user: "${CONSULTING_DB_USER:-}"
+    password: "${CONSULTING_DB_PASSWORD:-}"
+    db: "${CONSULTING_DB_NAME:-maze}"

@@ -41,9 +41,9 @@ def main():
     mysql_manager = MySQLManager(
         host=consulting_config.get("host", "localhost"),
         port=consulting_config.get("port", 3306),
-        user=consulting_config.get("user", "REDACTED"),
-        password=consulting_config.get("password", "REDACTED"),
-        database=consulting_config.get("db", "mazerun")
+        user=consulting_config.get("user"),
+        password=consulting_config.get("password"),
+        database=consulting_config.get("db", "maze")
     )
     mysql_manager.connect()
 

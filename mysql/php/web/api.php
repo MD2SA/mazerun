@@ -298,7 +298,12 @@ function start_mazerun_process(int $team, int $playerId, int $simulationId): arr
 }
 
 try {
-    $conn = new mysqli('mysql-db', 'REDACTED', 'REDACTED', 'mazerun');
+    $conn = new mysqli(
+        getenv('MYSQL_HOST') ?: 'mysql-db',
+        getenv('MYSQL_USER') ?: 'root',
+        getenv('MYSQL_PASSWORD') ?: '',
+        getenv('MYSQL_DATABASE') ?: 'mazerun'
+    );
     $conn->set_charset("utf8mb4");
 
     $input = file_get_contents("php://input");
@@ -650,7 +655,9 @@ try {
                 ["name" => "MySQL Database", "status" => "ONLINE"],
                 ["name" => "MQTT Broker",    "status" => "OFFLINE"]
             ];
-            $fp = @fsockopen("broker.hivemq.com", 1883, $errno, $errstr, 1);
+            $mqttBroker = getenv('MQTT_BROKER') ?: 'broker.hivemq.com';
+            $mqttPort = (int)(getenv('MQTT_PORT') ?: 1883);
+            $fp = @fsockopen($mqttBroker, $mqttPort, $errno, $errstr, 1);
             if ($fp) {
                 $status[1]["status"] = "ONLINE";
                 fclose($fp);

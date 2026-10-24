@@ -81,6 +81,11 @@ services:
     environment:
       # URI atualizada para incluir o Replica Set
       - MONGO_URI=mongodb://mongo-db:27017,mongo-replica-1:27017,mongo-replica-2:27017/?replicaSet=rs0
+      # Credentials for the read-only consulting MySQL (set them in mongo/.env)
+      - CONSULTING_DB_HOST=${CONSULTING_DB_HOST:-consulting-db.example.edu}
+      - CONSULTING_DB_USER=${CONSULTING_DB_USER:-}
+      - CONSULTING_DB_PASSWORD=${CONSULTING_DB_PASSWORD:-}
+      - CONSULTING_DB_NAME=${CONSULTING_DB_NAME:-maze}
 
 volumes:
   mongo_data_1:

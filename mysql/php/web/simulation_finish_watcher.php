@@ -62,7 +62,12 @@ function publish_simulation_finished(int $team, int $playerId, int $simulationId
 
 function sync_final_score(int $team, int $simulationId, int $playerId): void {
     try {
-        $remote = new mysqli('consulting-db.example.edu', 'REDACTED', 'REDACTED', 'maze');
+        $remote = new mysqli(
+            getenv('CONSULTING_DB_HOST') ?: 'consulting-db.example.edu',
+            getenv('CONSULTING_DB_USER') ?: '',
+            getenv('CONSULTING_DB_PASSWORD') ?: '',
+            getenv('CONSULTING_DB_NAME') ?: 'maze'
+        );
         $remote->set_charset('utf8mb4');
 
         $stmt = $remote->prepare("SELECT SUM(score) AS total_score FROM roomsscore WHERE Player = ?");
@@ -73,7 +78,12 @@ function sync_final_score(int $team, int $simulationId, int $playerId): void {
         $stmt->close();
         $remote->close();
 
-        $local = new mysqli('mysql-db', 'REDACTED', 'REDACTED', 'mazerun');
+        $local = new mysqli(
+            getenv('MYSQL_HOST') ?: 'mysql-db',
+            getenv('MYSQL_USER') ?: 'root',
+            getenv('MYSQL_PASSWORD') ?: '',
+            getenv('MYSQL_DATABASE') ?: 'mazerun'
+        );
         $local->set_charset('utf8mb4');
         $local->query("ALTER TABLE simulation ADD COLUMN IF NOT EXISTS total_score BIGINT NULL");
         $update = $local->prepare("UPDATE simulation SET total_score = ? WHERE id = ? AND player_id = ?");

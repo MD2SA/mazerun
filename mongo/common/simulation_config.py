@@ -46,10 +46,10 @@ class SimulationConfigRepository:
     def fetch_from_mysql(self):
         try:
             connection = mysql.connector.connect(
-                host=self.mysql_config.get("host", "consulting-db.example.edu"),
+                host=self.mysql_config.get("host", "localhost"),
                 port=self.mysql_config.get("port", 3306),
-                user=self.mysql_config.get("user", "REDACTED"),
-                password=self.mysql_config.get("password", "REDACTED"),
+                user=self.mysql_config.get("user"),
+                password=self.mysql_config.get("password"),
                 database=self.mysql_config.get("db", "maze"),
                 auth_plugin="mysql_native_password",
             )

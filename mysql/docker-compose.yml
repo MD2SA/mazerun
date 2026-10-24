@@ -5,7 +5,7 @@ services:
     ports:
       - "3306:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: REDACTED
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
     volumes:
       - mysql_data:/var/lib/mysql
       - ./db:/docker-entrypoint-initdb.d
@@ -21,6 +21,13 @@ services:
       - ../game:/game
     environment:
       - MYSQL_HOST=mysql-db
+      - MYSQL_USER=${MYSQL_USER:-root}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-root}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-mazerun}
+      - CONSULTING_DB_HOST=${CONSULTING_DB_HOST:-consulting-db.example.edu}
+      - CONSULTING_DB_USER=${CONSULTING_DB_USER:-}
+      - CONSULTING_DB_PASSWORD=${CONSULTING_DB_PASSWORD:-}
+      - CONSULTING_DB_NAME=${CONSULTING_DB_NAME:-maze}
     # restart: always
 
   phpmyadmin:
@@ -42,6 +49,20 @@ services:
     volumes:
       - ./php:/var/www/html
       - ../game:/game
+    environment:
+      - MYSQL_HOST=mysql-db
+      - MYSQL_USER=${MYSQL_USER:-root}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-root}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-mazerun}
+      - JWT_SECRET=${JWT_SECRET:-}
+      - MQTT_BROKER=${MQTT_BROKER:-broker.hivemq.com}
+      - MQTT_PORT=${MQTT_PORT:-1883}
+      - MAZERUN_DELAY=${MAZERUN_DELAY:-2}
+      - MAZERUN_EXE_PATH=${MAZERUN_EXE_PATH:-/game/server/mazerun.exe}
+      - CONSULTING_DB_HOST=${CONSULTING_DB_HOST:-consulting-db.example.edu}
+      - CONSULTING_DB_USER=${CONSULTING_DB_USER:-}
+      - CONSULTING_DB_PASSWORD=${CONSULTING_DB_PASSWORD:-}
+      - CONSULTING_DB_NAME=${CONSULTING_DB_NAME:-maze}
     depends_on:
       - mysql-db
 

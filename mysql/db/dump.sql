@@ -50,8 +50,8 @@ CREATE TABLE `user` (
 
 LOCK TABLES `user` WRITE;
 /*!40000 ALTER TABLE `user` DISABLE KEYS */;
--- Default admin password: see SECURITY.md
-INSERT INTO `user` VALUES ('System Admin','910000000','adm','admin@mazerun.io','1990-01-01',NULL,'REDACTED_BCRYPT_HASH');
+-- Admin password hash intentionally left empty. See SECURITY.md to set one.
+INSERT INTO `user` VALUES ('System Admin','910000000','adm','admin@mazerun.io','1990-01-01',NULL,'');
 /*!40000 ALTER TABLE `user` ENABLE KEYS */;
 UNLOCK TABLES;
 
