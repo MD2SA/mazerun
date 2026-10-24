@@ -1,38 +1,60 @@
-# Activate the virtual environment 
-# In root
-.\venv\Scripts\Activate.ps1
+# Web dashboard
+
+React 19 + Vite dashboard for the Mazerun project.
+
+## Quick start
 
 ```bash
- source .venv/bin/activate
+cp .env.example .env
+pnpm install
+pnpm dev
 ```
 
-# Install
+Open <http://localhost:5173>. The API URL is controlled by `VITE_API_URL`
+(default `http://127.0.0.1:8000/web/api.php`).
+
+## Docker
 
 ```bash
- npm install -g pnpm
- pnpm install
-``` 
-
-# Development
-
-```bash
- pnpm dev
+./run.sh        # Linux/macOS
+run.bat         # Windows
 ```
 
+## Scripts
 
-# React + Vite
+```bash
+pnpm dev       # Dev server
+pnpm build     # Production build -> dist/
+pnpm lint      # ESLint
+pnpm preview   # Preview the production build
+```
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Project structure
 
-Currently, two official plugins are available:
+```text
+web-app/
+├── src/
+│   ├── App.jsx              # Layout, routes, auth state
+│   ├── pages/               # Overview, Simulations, Users, Logs, Profile, Login
+│   ├── services/api.js      # API client and token storage
+│   ├── assets/
+│   └── index.css
+├── public/
+├── vite.config.js
+└── package.json
+```
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Pages
 
-## React Compiler
+| Route | Page |
+| --- | --- |
+| `/` | Overview |
+| `/simulations` | Simulations |
+| `/users` | Users / team directory |
+| `/logs` | Unified event stream |
+| `/profile` | Profile and password change |
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Docs
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+See [../docs/web-app.md](../docs/web-app.md) for the API client, auth flow, and
+theme details.

@@ -1,135 +1,142 @@
-# PISID - Projeto Marsamis
-<p align="center">
-  <img src="assets/flow.png" width="600" />
-</p>
+# PISID — Projeto Marsamis (mazerun)
 
 <p align="center">
-  <img src="assets/pipeline.png" witdth="600" />
+  <img src="assets/flow.png" width="600" alt="Mazerun event flow" />
 </p>
 
-## How to run:
+Mazerun is the PISID course project for monitoring the Marsamis maze. A simulator
+(`mazerun.exe`) publishes movement, temperature, sound, and actuator events over
+MQTT. A MongoDB layer ingests and validates the raw events, a MySQL persistence
+service stores the processed history, and a React web dashboard plus an Android
+app expose the data.
 
-1. Start the docker container:
+> **Academic project.** This repository is maintained for the PISID course at
+> ISCTE. It is not published under an open-source license; all rights are
+> reserved by the project authors.
+
+## Components
+
+| Component | Path | Responsibility |
+| --- | --- | --- |
+| Simulator | `game/server/mazerun.exe` (not tracked) | Publishes maze telemetry over MQTT |
+| Ingest + processing | `mongo/` | MQTT → MongoDB, validation, change streams, retries, ACKs |
+| Persistence | `mysql/persistence/` | Internal MQTT → MySQL |
+| API | `mysql/php/` | REST API for the web dashboard and Android app |
+| Web dashboard | `web-app/` | React + Vite monitoring UI |
+| Android app | `android/` | Mobile monitoring UI |
+| Database bootstrap | `mysql/db/` | Schema dump, procedures, roles |
+| Helper scripts | `scripts/` | Dump generation |
+
+## Quick start
+
+### Prerequisites
+
+- Docker Engine + Docker Compose v2
+- Node.js 20+ and pnpm (only for local web development)
+- Python 3.11+ (only for running the Python services outside Docker)
+- Android Studio (only for the Android app)
+- `mazerun.exe` and its `_internals/` folder (distributed separately by the course)
+
+### 1. Configure secrets
+
 ```bash
-docker compose up -d
-# or through Docker Desktop
+cp mysql/.env.example mysql/.env
+cp mongo/.env.example mongo/.env
+cp mysql/persistence/.env.example mysql/persistence/.env
 ```
 
-2. Start our own python "bridge":
+Edit `mysql/.env` and set at least:
 
-- From inside the dir `bridge/`
-  - Create python virtual environment (First time only)
-    ```bash
-    python3 -m venv venv
-    ```
-  - Activate virtual environment
-    - Linux/Mac
-      ```bash
-      source venv/bin/activate
-      ```
-    - Windows
-      ```bash
-      ./venv/Scripts/Activate.ps1
-      ```
-  - Install python packages
-    ```bash
-    pip install -r requirements.txt
-    ```
-  - Start python program
-    ```bash
-    python3 main.py
-    ```
+- `JWT_SECRET` — generate with `openssl rand -hex 32`
+- `CONSULTING_DB_*` — only if you need the course consulting database
+- `MYSQL_*` — change the local defaults if you are not using a throwaway database
 
-3. Start mazerun program:
+### 2. Start the MySQL + PHP stack
 
-- On a separate window start the mazerun executable with **this flags**. Once inside the dir where the program is, do:
-    - Windows
-        ```bash
-        .\mazerun.exe 25 --flagMessage 1 --delay 2 --broker broker.hivemq.com --portbroker 1883
-        ```
-    - Mac
-        - Once inside the dir where the program is:
-          ```bash
-          ??? something similar to windows ???
-          ```
-> In the future you may want to change up the flags read more [here](#FLAGS).
-
-4. Extra: visualize databases:
-- If you want to check the mongo DB try installing [MongoDB Compass](https://www.mongodb.com/products/tools/compass)
-  > Mysql is not ready yet, but when time comes there will be a docker container for it, so no need to install phpMyAdmin or others
-
----
-
-## Project structure
-
-This repo does not contain the executables for mazerun but they can be found here:
-
-- Python Server (mazerun.exe)
-    - Windows: https://moodle25.iscte-iul.pt/mod/resource/view.php?id=81634
-    - Mac: https://moodle25.iscte-iul.pt/mod/resource/view.php?id=97340
-
-- Monitor Graphs
-    - https://drive.google.com/file/d/1Pa2VCf-GVV0hlso8wbAz2FQivbaIkMrX/view?usp=sharing
-
-It is recommended to follow the following directory structure.
-> /server and /analytics directories will and should not be tracked by git
-
-```
-mazerun/
-├─ README.md
-├─ config.yaml
-├─ docker-compose.yml
-│
-├─ server/                 # Recommended: place for main exec
-│   ├─ \_internals/
-│   └─ mazerun.exe
-│
-├─ analytics/              # Recommended: place for graph execs
-│   ├─ \_internals/
-│   ├─ monitmaze.exe
-│   ├─ monitsound.exe
-│   ├─ monittemp.exe
-│   └─ marsupilami_icon.png
-│
-└─ bridge/*                 # Python programs to move data
+```bash
+cd mysql
+./run.sh        # Linux/macOS
+# run.bat       # Windows
 ```
 
----
+The script asks whether to recreate the database from `db/dump.sql`, then applies
+the procedures and roles, and starts MySQL, phpMyAdmin, the PHP API, and the
+persistence service.
 
-#### NOT WORKING, SAVE ME
+### 3. Start the MongoDB stack
 
-- Make sure all this are running at the same time:
-    - docker containers
-        - use `docker ps` and check if containers are up
-    - bridge/main.py
-    - mazerun.exe (with the correct flags)
+In a second terminal:
 
-- Errors somewhere in `bridge/**` ?
-    - Make sure you do `./venv/bin/activate.ps1` on Windows or `source venv/bin/activate/` on Linux/Mac, this activates the python virtual environment
-    - Once in the python virtual environment, make sure you do `pip install -r requirements.txt`, this install all required packages
-    - Check if bridge/config.yaml contains same info as your mazerun flags and docker-compose.yaml
+```bash
+cd mongo
+./run.sh
+```
 
-- Network / MQTT
-    - Internet must work
-    - Try switching the broker (check online for other brokers)
+This starts the three-node replica set and the Python inbound/outbound
+orchestrator.
 
----
+### 4. Start the simulator
 
-#### FLAGS
+Place the executable at `game/server/mazerun.exe` (the PHP container mounts
+`game/` at `/game`). You can then start a simulation from the web dashboard, or
+run it manually:
 
-- Explaining Flags for mazerun.exe:
-    - 25 -> number of our group
-    - flagMessage is used to selected what you want to see:
-        - 1 -> sound, temp, movements, actuators
-        - 2 -> movements
-        - 3 -> sound
-        - 4 -> temp
-        - 5 -> actuators
-    - delay -> time between movements
-    - broker -> broker used for communication
-    - portbroker -> broker port used
+```bash
+./mazerun.exe 25 --flagMessage 1 --delay 2 --broker broker.hivemq.com --portbroker 1883
+```
 
-Example:
-  ```bash
-  25 --flagMessage 1 --delay 2 --broker broker.hivemq.com --portbroker 1883
-  ```
+### 5. Start the clients
+
+- **Web dashboard (Docker):** `cd web-app && ./run.sh` → <http://localhost:5173>
+- **Web dashboard (local):** `cd web-app && pnpm install && pnpm dev`
+- **Android:** open `android/` in Android Studio and run the app. For the
+  emulator, use host `10.0.2.2:8000` and database `mazerun`.
+
+## Repository layout
+
+```text
+.
+├── android/              Android monitoring app
+├── assets/               Diagrams used in the docs
+├── docs/                 Architecture, setup, API, database and operations docs
+├── mongo/                MongoDB ingest + processing services
+├── mysql/                MySQL schema, PHP API and persistence service
+│   ├── db/               Dump, procedures and roles
+│   ├── persistence/      MQTT → MySQL worker
+│   └── php/              Web API (web/) and legacy Android endpoints (android/)
+├── scripts/              Dump generation helpers
+├── web-app/              React dashboard
+├── .env.example files    Per-service environment templates
+└── README.md
+```
+
+`game/` is not tracked; it is the local mount point for the simulator and the
+analytics executables.
+
+## Documentation
+
+- [Getting started](docs/getting-started.md)
+- [Architecture](docs/architecture.md)
+- [Data flow and MQTT topics](docs/data-flow.md)
+- [Configuration and secrets](docs/configuration.md)
+- [Database schema](docs/database.md)
+- [HTTP API](docs/api.md)
+- [Web app](docs/web-app.md)
+- [Android app](docs/android.md)
+- [Scripts](docs/scripts.md)
+- [Troubleshooting](docs/troubleshooting.md)
+- [Development and commit conventions](docs/development.md)
+- [History rewrite / re-clone notice](docs/history-rewrite.md)
+
+## Security
+
+- Never commit `.env` files. Only `.env.example` templates are tracked.
+- `JWT_SECRET` has no default; the PHP API refuses to start without it.
+- The dump ships without a usable admin password hash. See
+  [SECURITY.md](SECURITY.md) for the one-time setup.
+- The default MQTT broker is public. Use a private broker for real deployments.
+
+## License
+
+Academic project. All rights reserved by the authors. See
+[SECURITY.md](SECURITY.md) for contact and disclosure guidance.
