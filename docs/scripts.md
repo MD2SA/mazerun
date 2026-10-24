@@ -57,8 +57,9 @@ scripts\generate_dump.bat
 Details:
 
 - The container must be running (`docker ps`).
-- The shell version sources `mysql/.env` for `MYSQL_ROOT_PASSWORD`.
-- The batch version uses `%MYSQL_ROOT_PASSWORD%` if set, otherwise `root`.
+- The shell version sources `mysql/.env`.
+- The batch version loads simple `KEY=VALUE` entries from `mysql\.env` and exits
+  if `MYSQL_ROOT_PASSWORD` is still missing.
 - `mysqldump` runs inside the container, so the client and server versions
   match.
 - Output path: `mysql/db/dump.sql`.

@@ -17,8 +17,8 @@ Repository-wide helper scripts.
 scripts\generate_dump.bat
 ```
 
-The shell script sources `mysql/.env`; the batch script uses
-`%MYSQL_ROOT_PASSWORD%` or falls back to `root`. The container must be running.
+Both scripts load `mysql/.env` when present and require
+`MYSQL_ROOT_PASSWORD`. The container must be running.
 
 See [../docs/scripts.md](../docs/scripts.md) for the full list of service
 launchers and conventions.

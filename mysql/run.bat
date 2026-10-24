@@ -3,6 +3,13 @@ setlocal EnableExtensions EnableDelayedExpansion
 
 cd /d "%~dp0"
 
+rem Load simple KEY=VALUE entries from mysql/.env when present.
+if exist "%~dp0.env" (
+    for /f "usebackq eol=# tokens=1,* delims==" %%A in ("%~dp0.env") do (
+        if not "%%A"=="" set "%%A=%%B"
+    )
+)
+
 set CONTAINER=mazerun-mysql-db
 set DB_DIR=%~dp0db
 set DB=%MYSQL_DATABASE%
